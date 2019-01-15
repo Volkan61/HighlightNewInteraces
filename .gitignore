@@ -1,0 +1,20 @@
+.project
+.settings/
+.classpath
+target/
+
+
+# exclude everything
+excel/*
+# exception to the rule
+!excel//.gitkeep 
+
+# exclude everything
+svn/*
+# exception to the rule
+!svn//.gitkeep 
+
+# exclude everything
+pomFiles/*
+# exception to the rule
+!pomFiles//.gitkeep 
