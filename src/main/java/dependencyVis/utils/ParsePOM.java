@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,6 +11,8 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
+import dependencyVis.model.Interface;
+
 /**
  * Hello world!
  *
@@ -22,9 +24,11 @@ public class ParsePOM {
 
   private Model pomModel = null;
 
-  private List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
+  // private List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
+  private List<Interface> offeredInterfaces = new LinkedList<Interface>();
 
-  private List<Dependency> usedInterfaces = new LinkedList<Dependency>();
+  // private List<Dependency> usedInterfaces = new LinkedList<Dependency>();
+  private List<Interface> usedInterfaces = new LinkedList<Interface>();
 
   private List<Dependency> dependencies;
 
@@ -85,24 +89,16 @@ public class ParsePOM {
     return result;
   }
 
-  public List<Dependency> getUsedInterfaces() {
-
-    return this.usedInterfaces;
-  }
-
-  public List<Dependency> getOfferedInterfaces() {
-
-    return this.offeredInterfaces;
-  }
-
   public void extractInformationFromPOMModel(List<String> modules) {
 
-    this.offeredInterfaces = new LinkedList<Dependency>();
-    this.usedInterfaces = new LinkedList<Dependency>();
+    List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
+    List<Dependency> usedInterfaces = new LinkedList<Dependency>();
 
     // Lese pom.xml ein und speichere POM-Model ab
     // DependencyManagement dependencyManagement = this.pomModel.getDependencies();
     this.dependencies = this.pomModel.getDependencies();
+
+    // process Modules
 
     this.modules = modules;
     this.filteredModules = filterStrings(modules, "httpinvoker");
@@ -113,16 +109,44 @@ public class ParsePOM {
       String dependencyArtifactIdString = dependency.getArtifactId();
 
       if (this.filteredModules.contains(dependencyArtifactIdString)) {
-        this.offeredInterfaces.add(dependency);
+        offeredInterfaces.add(dependency);
       } else
-        this.usedInterfaces.add(dependency);
+        usedInterfaces.add(dependency);
     }
+
+    for (Iterator iterator = offeredInterfaces.iterator(); iterator.hasNext();) {
+      Dependency dependency = (Dependency) iterator.next();
+
+      String Id = dependency.getArtifactId();
+      int index = Id.lastIndexOf('-');
+      String name = Id.substring(0, index);
+      String version = Id.substring(index + 2, Id.length());
+      double versionDobule = Double.parseDouble(version);
+
+      Interface interfaceInstance = new Interface(Id, name, version, versionDobule);
+      this.offeredInterfaces.add(interfaceInstance);
+    }
+
+    for (Iterator iterator = usedInterfaces.iterator(); iterator.hasNext();) {
+      Dependency dependency = (Dependency) iterator.next();
+
+      String Id = dependency.getArtifactId();
+      int index = Id.lastIndexOf('-');
+      String name = Id.substring(0, index);
+      String version = Id.substring(index + 2, Id.length());
+      double versionDobule = Double.parseDouble(version);
+      Interface interfaceInstance = new Interface(Id, name, version, versionDobule);
+      this.usedInterfaces.add(interfaceInstance);
+    }
+
+    System.out.println("asdsadsa");
+
   }
 
   public void extractInformationFromPOMModel() {
 
-    this.offeredInterfaces = new LinkedList<Dependency>();
-    this.usedInterfaces = new LinkedList<Dependency>();
+    List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
+    List<Dependency> usedInterfaces = new LinkedList<Dependency>();
 
     // Lese pom.xml ein und speichere POM-Model ab
     // DependencyManagement dependencyManagement = this.pomModel.getDependencies();
@@ -137,9 +161,9 @@ public class ParsePOM {
       String dependencyArtifactIdString = dependency.getArtifactId();
 
       if (this.filteredModules.contains(dependencyArtifactIdString)) {
-        this.offeredInterfaces.add(dependency);
+        offeredInterfaces.add(dependency);
       } else
-        this.usedInterfaces.add(dependency);
+        usedInterfaces.add(dependency);
     }
   }
 
@@ -173,6 +197,38 @@ public class ParsePOM {
   public void setPomModel(Model pomModel) {
 
     this.pomModel = pomModel;
+  }
+
+  /**
+   * @return offeredInterfaces
+   */
+  public List<Interface> getOfferedInterfaces() {
+
+    return this.offeredInterfaces;
+  }
+
+  /**
+   * @param offeredInterfaces new value of {@link #getofferedInterfaces}.
+   */
+  public void setOfferedInterfaces(List<Interface> offeredInterfaces) {
+
+    this.offeredInterfaces = offeredInterfaces;
+  }
+
+  /**
+   * @return usedInterfaces
+   */
+  public List<Interface> getUsedInterfaces() {
+
+    return this.usedInterfaces;
+  }
+
+  /**
+   * @param usedInterfaces new value of {@link #getusedInterfaces}.
+   */
+  public void setUsedInterfaces(List<Interface> usedInterfaces) {
+
+    this.usedInterfaces = usedInterfaces;
   }
 
 }

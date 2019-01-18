@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData.SVNConfig;
+package dependencyVis.svn.config;
 
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;

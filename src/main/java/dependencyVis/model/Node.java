@@ -1,8 +1,6 @@
-package com.programmer.gate2.readData;
+package dependencyVis.model;
 
 import java.util.List;
-
-import org.apache.maven.model.Dependency;
 
 /**
  * @author vhacimuf
@@ -12,9 +10,11 @@ public class Node {
 
   private String name = "";
 
-  private List<Dependency> offeredInterfaces;
+  // private List<Dependency> offeredInterfaces;
+  private List<Interface> offeredInterfaces;
 
-  private List<Dependency> usedInterfaces;
+  // private List<Dependency> usedInterfaces;
+  private List<Interface> usedInterfaces;
 
   /**
    * @return name
@@ -35,7 +35,7 @@ public class Node {
   /**
    * @return offeredInterfaces
    */
-  public List<Dependency> getOfferedInterfaces() {
+  public List<Interface> getOfferedInterfaces() {
 
     return this.offeredInterfaces;
   }
@@ -43,7 +43,7 @@ public class Node {
   /**
    * @param offeredInterfaces new value of {@link #getofferedInterfaces}.
    */
-  public void setOfferedInterfaces(List<Dependency> offeredInterfaces) {
+  public void setOfferedInterfaces(List<Interface> offeredInterfaces) {
 
     this.offeredInterfaces = offeredInterfaces;
   }
@@ -51,7 +51,7 @@ public class Node {
   /**
    * @return usedInterfaces
    */
-  public List<Dependency> getUsedInterfaces() {
+  public List<Interface> getUsedInterfaces() {
 
     return this.usedInterfaces;
   }
@@ -59,7 +59,7 @@ public class Node {
   /**
    * @param usedInterfaces new value of {@link #getusedInterfaces}.
    */
-  public void setUsedInterfaces(List<Dependency> usedInterfaces) {
+  public void setUsedInterfaces(List<Interface> usedInterfaces) {
 
     this.usedInterfaces = usedInterfaces;
   }

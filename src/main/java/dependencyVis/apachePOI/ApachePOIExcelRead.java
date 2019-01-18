@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.apachePOI;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,7 +23,7 @@ public class ApachePOIExcelRead {
   public static void main(String[] args) {
 
     String path = "excel/2019-01-04_Gesamtreleaseletter_2019-1-R.xlsm";
-    List<String> column = ApachePOIExcelRead.getColumn(path, 8);
+    List<String> column = ApachePOIExcelRead.getColumn(1, path, 8);
 
     for (int i = 0; i < column.size(); i++) {
       String currentColumn = column.get(i);
@@ -33,7 +33,7 @@ public class ApachePOIExcelRead {
 
   }
 
-  public static List<String> getColumn(String path, int columnIndex) {
+  public static List<String> getColumn(int pSheet, String path, int columnIndex) {
 
     LinkedList<String> output = new LinkedList<String>();
 
@@ -44,7 +44,7 @@ public class ApachePOIExcelRead {
       XSSFWorkbook workbook = new XSSFWorkbook(file);
 
       // Get first/desired sheet from the workbook
-      XSSFSheet sheet = workbook.getSheetAt(1);
+      XSSFSheet sheet = workbook.getSheetAt(pSheet);
 
       for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
         Row row = sheet.getRow(rowIndex);

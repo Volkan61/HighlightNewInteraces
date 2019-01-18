@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.neo4j;
 
 import java.io.File;
 import java.util.Iterator;
@@ -69,10 +69,14 @@ public class NEO4JDatabase {
 
       for (Iterator iterator = keySet.iterator(); iterator.hasNext();) {
         String key = (String) iterator.next();
-
         bobNode.setProperty(key, properties.get(key));
       }
 
+      String id = "";
+      for (Iterator iterator = keySet.iterator(); iterator.hasNext();) {
+        String key = (String) iterator.next();
+        id = id + properties.get(key);
+      }
       // bobNode.addLabel(DynamicLabel.label(label));
       // Node aliceNode = this.graphDb.createNode(NodeType.Person);
       // bobNode.setProperty("PiD", 5002);
@@ -98,8 +102,8 @@ public class NEO4JDatabase {
 
       // Iterable<Node> lNodes =this.graphDb.find
 
-      Node nodeOne = this.graphDb.findNode(nodeTypeOne, "id", nodeOneId);
-      Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "id", nodeTwoId);
+      Node nodeOne = this.graphDb.findNode(nodeTypeOne, "Pid", nodeOneId);
+      Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "Pid", nodeTwoId);
 
       // Node nodeTwo = this.graphDb.findNode(DynamicLabel.label("Entity"), "id", nodeTwoId);
 
@@ -110,6 +114,7 @@ public class NEO4JDatabase {
 
       Relationship relation = nodeOne.createRelationshipTo(nodeTwo, type);
       relation.setProperty("test", "test");
+
       tx.success();
     } finally {
     }
@@ -120,7 +125,7 @@ public class NEO4JDatabase {
   }
 
   public enum RelationType implements RelationshipType {
-    uses, offers, Interface
+    uses, offers, Interface, Connection, Oldversion
   }
 
   public static void main(String[] args) {

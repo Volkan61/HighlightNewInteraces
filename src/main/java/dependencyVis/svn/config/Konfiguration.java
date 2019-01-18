@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData.SVNConfig;
+package dependencyVis.svn.config;
 
 /**
  * Konfigurations.

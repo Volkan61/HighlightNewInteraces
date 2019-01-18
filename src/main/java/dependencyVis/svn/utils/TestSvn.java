@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.svn.utils;
 
 import java.io.File;
 
@@ -11,7 +11,7 @@ import org.tmatesoft.svn.core.wc.SVNClientManager;
 import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
-import com.programmer.gate2.readData.SVNConfig.Konfiguration;
+import dependencyVis.svn.config.Konfiguration;
 
 /**
  * @author vhacimuf

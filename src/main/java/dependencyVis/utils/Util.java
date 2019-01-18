@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.utils;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package com.programmer.gate2.readData;
+package dependencyVis.svn.utils;
 
 /*
  * ====================================================================
@@ -30,7 +30,7 @@ import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 
-import com.programmer.gate2.readData.SVNConfig.Konfiguration;
+import dependencyVis.svn.config.Konfiguration;
 
 /**
  *
