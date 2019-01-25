@@ -1,4 +1,4 @@
-package dependencyVis.model;
+package updatedinterfacesvis.model;
 
 /**
  * @author vhacimuf
@@ -12,6 +12,8 @@ public class Interface {
 
   private String version;
 
+  private String technicalVersion;
+
   private double versionDouble;
 
   /**
@@ -20,12 +22,13 @@ public class Interface {
    * @param name
    * @param version
    */
-  public Interface(String id, String name, String version, double versionDouble) {
+  public Interface(String id, String name, String version, double versionDouble, String technicalVersion) {
 
     this.id = id;
     this.name = name;
     this.version = version;
     this.versionDouble = versionDouble;
+    this.technicalVersion = technicalVersion;
 
   }
 
@@ -91,6 +94,22 @@ public class Interface {
   public void setVersionDouble(double versionDouble) {
 
     this.versionDouble = versionDouble;
+  }
+
+  /**
+   * @return technicalVersion
+   */
+  public String getTechnicalVersion() {
+
+    return this.technicalVersion;
+  }
+
+  /**
+   * @param technicalVersion new value of {@link #gettechnicalVersion}.
+   */
+  public void setTechnicalVersion(String technicalVersion) {
+
+    this.technicalVersion = technicalVersion;
   }
 
   @Override

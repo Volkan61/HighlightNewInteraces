@@ -1,4 +1,4 @@
-package dependencyVis.model;
+package updatedinterfacesvis.model;
 
 import java.util.List;
 

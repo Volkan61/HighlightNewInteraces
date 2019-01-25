@@ -1,4 +1,4 @@
-package dependencyVis.utils;
+package updatedinterfacesvis.utils;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package dependencyVis.apachePOI;
+package updatedinterfacesvis.poi;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,30 +10,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-public class ApachePOIExcelRead {
+/**
+ * @author vhacimuf
+ *
+ */
+public class ParseExcel {
 
-  private static final String FILE_NAME = "/tmp/MyFirstExcel.xlsx";
-
-  /**
-   * @param args
-   */
-  /**
-   * @param args
-   */
-  public static void main(String[] args) {
-
-    String path = "excel/2019-01-04_Gesamtreleaseletter_2019-1-R.xlsm";
-    List<String> column = ApachePOIExcelRead.getColumn(1, path, 8);
-
-    for (int i = 0; i < column.size(); i++) {
-      String currentColumn = column.get(i);
-      System.out.println(currentColumn);
-    }
-    System.out.println("end");
-
-  }
-
-  public static List<String> getColumn(int pSheet, String path, int columnIndex) {
+  public static List<String> parse(int pSheet, String path, int columnIndex) {
 
     LinkedList<String> output = new LinkedList<String>();
 
@@ -53,7 +36,6 @@ public class ApachePOIExcelRead {
           if (cell != null) {
             // Found column and there is value in the cell.
             String cellValueMaybeNull = cell.getStringCellValue();
-            // System.out.println(cellValueMaybeNull);
 
             output.add(cellValueMaybeNull);
             // Do something with the cellValueMaybeNull here ...

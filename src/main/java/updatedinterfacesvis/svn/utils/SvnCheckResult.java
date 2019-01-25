@@ -1,4 +1,4 @@
-package dependencyVis.svn.utils;
+package updatedinterfacesvis.svn.utils;
 
 /**
  * @author Capgemini, Thomas Timu

@@ -1,4 +1,4 @@
-package dependencyVis.svn.utils;
+package updatedinterfacesvis.svn.utils;
 
 /*
  * ====================================================================
@@ -20,6 +20,7 @@ import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNNodeKind;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.auth.BasicAuthenticationManager;
+import org.tmatesoft.svn.core.auth.ISVNAuthenticationManager;
 import org.tmatesoft.svn.core.auth.SVNAuthentication;
 import org.tmatesoft.svn.core.auth.SVNPasswordAuthentication;
 import org.tmatesoft.svn.core.auth.SVNSSLAuthentication;
@@ -29,18 +30,17 @@ import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 
-import dependencyVis.svn.config.Konfiguration;
+import updatedinterfacesvis.svn.config.Konfiguration;
 
 /**
  *
  * SVN Helper stellt eine Verbindung zu SVN Repository und
  *
  * @author Capgemini, Rickey Gladstone
- * @version $Id: SvnHelper.java 62830 2017-08-18 12:09:44Z thtimu $
+ * @version $Id: SvnHelperNeu.java 62830 2017-08-18 12:09:44Z thtimu $
  */
-// TODO: Can this be made more robust?
-public class SvnHelper {
-  private static final Logger LOG = Logger.getLogger(SvnHelper.class);
+public class SvnHelperNeu {
+  private static final Logger LOG = Logger.getLogger(SvnHelperNeu.class);
 
   static {
     setupLibrary();
@@ -66,32 +66,7 @@ public class SvnHelper {
     FSRepositoryFactory.setup();
   }
 
-  private BasicAuthenticationManager authManager;
-
-  /**
-   * Prüft, ob eine allgemein zu SVN ohne Probleme verbunden werden kann, verwendet das SVN_Ziel URL aus der
-   * release.checker.properties
-   * 
-   * @return true or false
-   */
-  public boolean checkSVNConnection(String url) {
-
-    SVNRepository repository = null;
-
-    try {
-      repository = SVNRepositoryFactory.create(SVNURL.parseURIEncoded(url));
-      repository.setAuthenticationManager(this.authManager);
-      repository.testConnection();
-      LOG.debug("ERFOLGREICH: '" + url + "'");
-      return true;
-
-    } catch (SVNException svne) {
-      LOG.warn("FEHLGESCHLAGEN: '" + url + "'");
-      LOG.warn(svne);
-      return false;
-    }
-
-  }
+  private ISVNAuthenticationManager authManager;
 
   /**
    * Prüft ob der funktionierende Link funktioniert. Dabei wird versucht den aktuellen Logeintrag zu lesen.
@@ -99,55 +74,78 @@ public class SvnHelper {
    * @param url
    * @return true or false
    */
-  public boolean checkSVNLink(String url) {
+  public SvnCheckResult checkSVNLink(String url) {
 
     final StopWatch stopwatch = new StopWatch();
-
     SVNRepository repository = null;
-    stopwatch.start();
 
     try {
 
-      LOG.debug("Step 1: " + stopwatch);
       SVNURL svnUrl = SVNURL.parseURIEncoded(url);
-      LOG.debug("Step 2: " + stopwatch);
       repository = SVNRepositoryFactory.create(svnUrl);
-
-      LOG.debug("Step 3: " + stopwatch);
       repository.setAuthenticationManager(this.authManager);
-
-      LOG.debug("Step 4: " + stopwatch);
+      stopwatch.start();
       long latestRevision = repository.getLatestRevision();
-      LOG.debug("Step 5: " + stopwatch);
+      stopwatch.stop();
+      LOG.debug("Duration for getLatestversion: " + stopwatch);
+      stopwatch.reset();
+      stopwatch.start();
       SVNURL repositoryRoot = repository.getRepositoryRoot(true);
-      LOG.debug("Step 6: " + stopwatch);
+      stopwatch.stop();
+      LOG.debug("Duration for getRepositoryRoot: " + stopwatch);
       String path = url.substring(repositoryRoot.toString().length());
-      LOG.debug("Step 7: " + stopwatch);
+      stopwatch.reset();
+      stopwatch.start();
       SVNNodeKind nodeKind = repository.checkPath(path, latestRevision);
-      LOG.debug("Step 8: " + stopwatch);
-      boolean success = false;
+      stopwatch.stop();
+      LOG.debug("Duration for checkPath(" + path + "): " + stopwatch);
+      SvnCheckResult result;
       if (nodeKind.equals(SVNNodeKind.FILE) || nodeKind.equals(SVNNodeKind.DIR)) {
-        LOG.debug("ERFOLGREICH: '" + url + "': " + stopwatch);
-        success = true;
+        LOG.debug("ERFOLGREICH: '" + url);
+        result = new SvnCheckResult(true, true);
+      } else if (nodeKind.equals(SVNNodeKind.NONE)) {
+        result = new SvnCheckResult(false, true);
+      } else {
+        result = new SvnCheckResult(false, true);
       }
-      LOG.debug("Step 9: " + stopwatch);
-      return success;
-
+      return result;
     } catch (SVNException svne) {
-      LOG.warn("FEHLGESCHLAGEN: '" + url + "'");
+      LOG.warn("FEHLGESCHLAGEN: '" + url);
       LOG.warn(svne);
-      return false;
+      SvnCheckResult result;
+      if (svne.getErrorMessage().getErrorCode().isAuthentication()) {
+        result = new SvnCheckResult(false, false);
+      } else {
+        result = new SvnCheckResult(false, true);
+      }
+      return result;
     }
   }
 
   public void init(Konfiguration konfiguration) {
 
-    konfiguration = konfiguration;
-    this.authManager = new BasicAuthenticationManager(
-        new SVNAuthentication[] {
-        new SVNSSLAuthentication(new File(konfiguration.getSvnCertificate()), konfiguration.getSvnCertificatePasswort(),
-            false),
-        new SVNPasswordAuthentication(konfiguration.getSvnUsername(), konfiguration.getSvnPassword(), false) });
-  }
+    File certFile = new File(konfiguration.getSvnCertificate());
+    char[] certPassword = konfiguration.getSvnCertificatePasswort().toCharArray();
+    boolean storageAllowed = false;
+    SVNURL url = null;
+    boolean isPartial = false;
+    SVNSSLAuthentication svnsslAuthentication = SVNSSLAuthentication.newInstance(certFile, certPassword, storageAllowed,
+        url, isPartial);
+    String svnUserName = konfiguration.getSvnUsername();
+    char[] svnPassword = konfiguration.getSvnPassword().toCharArray();
+    SVNPasswordAuthentication svnPasswordAuthentication = SVNPasswordAuthentication.newInstance(svnUserName,
+        svnPassword, storageAllowed, url, isPartial);
 
+    this.authManager = new BasicAuthenticationManager(
+        new SVNAuthentication[] { svnsslAuthentication, svnPasswordAuthentication });
+  }
+  /*
+   * public void checkout() {
+   *
+   * SVNClientManager ourClientManager = SVNClientManager.newInstance(null, repository.getAuthenticationManager());
+   * SVNUpdateClient updateClient = ourClientManager.getUpdateClient(); updateClient.setIgnoreExternals(false);
+   * updateClient.doCheckout(url, destPath, revision, revision, isRecursive);
+   *
+   * }
+   */
 }

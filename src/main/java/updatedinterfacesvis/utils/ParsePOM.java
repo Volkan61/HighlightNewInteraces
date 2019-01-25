@@ -1,4 +1,4 @@
-package dependencyVis.utils;
+package updatedinterfacesvis.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import dependencyVis.model.Interface;
+import updatedinterfacesvis.model.Interface;
 
 /**
  * Hello world!
@@ -24,10 +27,8 @@ public class ParsePOM {
 
   private Model pomModel = null;
 
-  // private List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
   private List<Interface> offeredInterfaces = new LinkedList<Interface>();
 
-  // private List<Dependency> usedInterfaces = new LinkedList<Dependency>();
   private List<Interface> usedInterfaces = new LinkedList<Interface>();
 
   private List<Dependency> dependencies;
@@ -38,41 +39,45 @@ public class ParsePOM {
 
   private List<Dependency> filteredDependencies;
 
+  private String regEx;
+
   /**
    * The constructor.
+   *
+   * @throws XmlPullParserException
+   * @throws IOException
    */
-  public ParsePOM(String pathToPOMFile) {
+  public ParsePOM(String pathToPOMFile, String regEx) throws IOException, XmlPullParserException {
 
-    try {
-      File f = new File(pathToPOMFile);
-      this.pomModel = Util.getModelFromPOM(f);
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (XmlPullParserException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-
-    // extractInformationFromPOMModel();
+    this.regEx = regEx;
+    File f = new File(pathToPOMFile);
+    this.pomModel = Util.getModelFromPOM(f);
+    // TODO Auto-generated catch block
+    // TODO Auto-generated catch block
   }
 
-  private static List<String> filterStrings(List<String> modules, String str) {
+  private List<String> filterStrings(List<String> modules) {
 
     List<String> result = new ArrayList<String>();
 
     for (Iterator iter = modules.iterator(); iter.hasNext();) {
       String string = (String) iter.next();
 
-      boolean containsString = string.toLowerCase().contains(str.toLowerCase());
-      if (containsString) {
+      // boolean containsString = string.toLowerCase().contains(str.toLowerCase());
+
+      boolean containsString = string.toLowerCase().matches(this.regEx);
+
+      Pattern p = Pattern.compile(this.regEx.toLowerCase());
+      Matcher m = p.matcher(string);
+
+      if (m.find()) {
         result.add(string);
       }
     }
     return result;
   }
 
-  private static List<Dependency> filterDependencies(List<Dependency> modules, String str) {
+  private List<Dependency> filterDependencies(List<Dependency> modules) {
 
     List<Dependency> result = new ArrayList<Dependency>();
 
@@ -81,28 +86,32 @@ public class ParsePOM {
 
       String artifactId = dependency.getArtifactId();
 
-      boolean containsString = artifactId.toLowerCase().contains(str.toLowerCase());
-      if (containsString) {
+      Pattern p = Pattern.compile(this.regEx);
+      Matcher m = p.matcher(artifactId.toLowerCase());
+
+      boolean containsString = artifactId.toLowerCase().matches(this.regEx);
+      if (m.find()) {
         result.add(dependency);
       }
     }
     return result;
   }
 
-  public void extractInformationFromPOMModel(List<String> modules) {
+  public void extractInformationFromPOMModel(Model parentModuleModel) {
 
     List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
     List<Dependency> usedInterfaces = new LinkedList<Dependency>();
 
-    // Lese pom.xml ein und speichere POM-Model ab
-    // DependencyManagement dependencyManagement = this.pomModel.getDependencies();
     this.dependencies = this.pomModel.getDependencies();
 
     // process Modules
 
-    this.modules = modules;
-    this.filteredModules = filterStrings(modules, "httpinvoker");
-    this.filteredDependencies = filterDependencies(this.dependencies, "httpinvoker");
+    DependencyManagement dependencyManagement = parentModuleModel.getDependencyManagement();
+    List<Dependency> dependencyManagementDependencies = dependencyManagement.getDependencies();
+
+    this.modules = parentModuleModel.getModules();
+    this.filteredModules = filterStrings(parentModuleModel.getModules());
+    this.filteredDependencies = filterDependencies(this.dependencies);
 
     for (int i = 0; i < this.filteredDependencies.size(); i++) {
       Dependency dependency = this.filteredDependencies.get(i);
@@ -119,11 +128,22 @@ public class ParsePOM {
 
       String Id = dependency.getArtifactId();
       int index = Id.lastIndexOf('-');
-      String name = Id.substring(0, index);
-      String version = Id.substring(index + 2, Id.length());
-      double versionDobule = Double.parseDouble(version);
 
-      Interface interfaceInstance = new Interface(Id, name, version, versionDobule);
+      char checkChar = Id.charAt(index + 1);
+
+      String technicalVersion = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+
+      double versionDobule = 0;
+      String version = "0";
+      String name = Id;
+
+      if (checkChar == 'v') {
+        name = Id.substring(0, index);
+        version = Id.substring(index + 2, Id.length());
+        versionDobule = Double.parseDouble(version);
+      }
+
+      Interface interfaceInstance = new Interface(Id, name, version, versionDobule, technicalVersion);
       this.offeredInterfaces.add(interfaceInstance);
     }
 
@@ -132,15 +152,24 @@ public class ParsePOM {
 
       String Id = dependency.getArtifactId();
       int index = Id.lastIndexOf('-');
-      String name = Id.substring(0, index);
-      String version = Id.substring(index + 2, Id.length());
-      double versionDobule = Double.parseDouble(version);
-      Interface interfaceInstance = new Interface(Id, name, version, versionDobule);
+
+      char sadasd = Id.charAt(index + 1);
+
+      String technicalVersion = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+
+      double versionDobule = 0;
+      String version = "0";
+      String name = Id;
+
+      if (sadasd == 'v') {
+        name = Id.substring(0, index);
+        version = Id.substring(index + 2, Id.length());
+        versionDobule = Double.parseDouble(version);
+      }
+
+      Interface interfaceInstance = new Interface(Id, name, version, versionDobule, technicalVersion);
       this.usedInterfaces.add(interfaceInstance);
     }
-
-    System.out.println("asdsadsa");
-
   }
 
   public void extractInformationFromPOMModel() {
@@ -148,13 +177,11 @@ public class ParsePOM {
     List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
     List<Dependency> usedInterfaces = new LinkedList<Dependency>();
 
-    // Lese pom.xml ein und speichere POM-Model ab
-    // DependencyManagement dependencyManagement = this.pomModel.getDependencies();
     this.dependencies = this.pomModel.getDependencies();
 
     this.modules = this.pomModel.getModules();
-    this.filteredModules = filterStrings(this.modules, "httpinvoker");
-    this.filteredDependencies = filterDependencies(this.dependencies, "httpinvoker");
+    this.filteredModules = filterStrings(this.modules);
+    this.filteredDependencies = filterDependencies(this.dependencies);
 
     for (int i = 0; i < this.filteredDependencies.size(); i++) {
       Dependency dependency = this.filteredDependencies.get(i);
@@ -165,6 +192,25 @@ public class ParsePOM {
       } else
         usedInterfaces.add(dependency);
     }
+  }
+
+  public String getInterfaceTechnicalVersion(List<Dependency> listOfDependencies, String artifactId) {
+
+    Dependency dep = null;
+    String technicalVersion = null;
+
+    for (Iterator iterator3 = listOfDependencies.iterator(); iterator3.hasNext();) {
+      Dependency dependency2 = (Dependency) iterator3.next();
+      if (dependency2.getArtifactId().equals(artifactId)) {
+        dep = dependency2;
+        break;
+      }
+    }
+    if (dep != null) {
+      technicalVersion = dep.getVersion();
+    }
+
+    return technicalVersion;
   }
 
   /**

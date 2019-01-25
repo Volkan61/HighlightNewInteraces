@@ -1,4 +1,4 @@
-package dependencyVis.svn.config;
+package updatedinterfacesvis.svn.config;
 
 import java.util.prefs.BackingStoreException;
 

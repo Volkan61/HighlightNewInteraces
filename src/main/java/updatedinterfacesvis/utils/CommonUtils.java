@@ -1,4 +1,4 @@
-package dependencyVis.utils;
+package updatedinterfacesvis.utils;
 
 /**
  * @author vhacimuf

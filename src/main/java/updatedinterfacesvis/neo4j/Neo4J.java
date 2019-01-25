@@ -1,4 +1,4 @@
-package dependencyVis.neo4j;
+package updatedinterfacesvis.neo4j;
 
 import java.io.File;
 import java.util.Iterator;
@@ -17,22 +17,20 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
  * @author vhacimuf
  *
  */
-public class NEO4JDatabase {
+public class Neo4J {
 
   GraphDatabaseService graphDb;
 
   /**
    * The constructor.
    */
-  // File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" + "/data/databases/graph.db");
 
-  public NEO4JDatabase(String pathToDatabase) {
+  public Neo4J(String path) {
 
-    File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" + "/data/databases/graph.db");
+    // File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" + "/data/databases/graph.db");
+    File a = new File(path);
     this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(a);
   }
-
-  // Map<String, String> map = new HashMap<String, String>();
 
   public void addNode(NodeType nodeType, Map<String, Integer> properties) {
 
@@ -47,12 +45,6 @@ public class NEO4JDatabase {
         String key = (String) iterator.next();
         bobNode.setProperty(key, properties.get(key));
       }
-      // Node aliceNode = this.graphDb.createNode(NodeType.Person);
-      // bobNode.setProperty("PiD", 5002);
-      // bobNode.setProperty("Age", 23);
-
-      // Relationship alice = aliceNode.createRelationshipTo(bobNode, RelationType.Know);
-      // alice.setProperty("test", "test");
       tx.success();
     } finally {
     }
@@ -61,7 +53,6 @@ public class NEO4JDatabase {
   public void addNode(NodeType nodeType, Map<String, String> properties, String label) {
 
     try (Transaction tx = this.graphDb.beginTx()) {
-      // Database operations go here
 
       Node bobNode = this.graphDb.createNode(nodeType);
 
@@ -77,13 +68,6 @@ public class NEO4JDatabase {
         String key = (String) iterator.next();
         id = id + properties.get(key);
       }
-      // bobNode.addLabel(DynamicLabel.label(label));
-      // Node aliceNode = this.graphDb.createNode(NodeType.Person);
-      // bobNode.setProperty("PiD", 5002);
-      // bobNode.setProperty("Age", 23);
-
-      // Relationship alice = aliceNode.createRelationshipTo(bobNode, RelationType.Know);
-      // alice.setProperty("test", "test");
       tx.success();
     } finally {
     }
@@ -98,22 +82,12 @@ public class NEO4JDatabase {
       Map<String, String> properties, RelationType type) {
 
     try (Transaction tx = this.graphDb.beginTx()) {
-      // Database operations go here
-
-      // Iterable<Node> lNodes =this.graphDb.find
 
       Node nodeOne = this.graphDb.findNode(nodeTypeOne, "Pid", nodeOneId);
       Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "Pid", nodeTwoId);
 
-      // Node nodeTwo = this.graphDb.findNode(DynamicLabel.label("Entity"), "id", nodeTwoId);
-
-      // Get Node 1
-      // Node bobNode = this.graphDb.createNode(NodeType.Person);
-      // Get Node 2
-      // Node aliceNode = this.graphDb.createNode(NodeType.Person);
-
       Relationship relation = nodeOne.createRelationshipTo(nodeTwo, type);
-      relation.setProperty("test", "test");
+      // relation.setProperty("test", "test");
 
       tx.success();
     } finally {
@@ -121,39 +95,10 @@ public class NEO4JDatabase {
   }
 
   public enum NodeType implements Label {
-    Application, UsedInterface, OfferedInterface
+    Application, Interface
   }
 
   public enum RelationType implements RelationshipType {
     uses, offers, Interface, Connection, Oldversion
-  }
-
-  public static void main(String[] args) {
-
-    GraphDatabaseService graphDb;
-
-    File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" + "/data/databases/graph.db");
-
-    graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(a);
-    try (Transaction tx = graphDb.beginTx()) {
-      // Database operations go here
-
-      Node bobNode = graphDb.createNode(NodeType.Application);
-      bobNode.setProperty("PiD", 5001);
-      bobNode.setProperty("Age", 23);
-
-      Node aliceNode = graphDb.createNode(NodeType.Application);
-      bobNode.setProperty("PiD", 5002);
-      bobNode.setProperty("Age", 23);
-
-      Relationship alice = aliceNode.createRelationshipTo(bobNode, RelationType.Interface);
-      alice.setProperty("test", "test");
-      tx.success();
-    } finally {
-
-    }
-
-    graphDb.shutdown();
-
   }
 }
