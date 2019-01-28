@@ -22,13 +22,11 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.tmatesoft.svn.core.SVNDepth;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 import org.tmatesoft.svn.core.wc.SVNClientManager;
-import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
 import updatedinterfacesvis.model.Interface;
@@ -70,10 +68,7 @@ public class main {
      * logger.error( "Meine Error-Meldung" ); logger.fatal( "Meine Fatal-Meldung" );
      */
 
-    boolean append = true;
-
     // 1. Lese Parameter aus der application.properties Datei ein
-
     Properties applicationProperties = new Properties();
     BufferedInputStream stream = null;
 
@@ -109,29 +104,20 @@ public class main {
     String inputColumnNumber = applicationProperties.getProperty("column");
     int inputColumnNumberValue = Integer.parseInt(inputColumnNumber);
     String inputRowNumber = applicationProperties.getProperty("row");
-    // int inputRowNumberValue = Integer.parseInt(inputRowNumber);
+    int inputRowNumberValue = Integer.parseInt(inputRowNumber);
     String svnTempPath = applicationProperties.getProperty("svnTemp");
     String neo4J = applicationProperties.getProperty("neo4J");
     String regEx = applicationProperties.getProperty("regEx");
 
     // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den Repositories
     List<String> column = ParseExcel.parse(inputSheetNumberValue, inputExcelPath, inputColumnNumberValue);
-
     LinkedList<Node> nodesList = new LinkedList<>();
     Nodes nodes = new Nodes();
     nodes.setNodes(nodesList);
 
-    // Links alle hier gespeichert
-    // row Min und row Max berücksichtigen
-    for (int i = 0; i < column.size(); i++) {
-      String currentColumn = column.get(i);
-      // System.out.println(currentColumn);
-    }
-
     // Preferences pdfds = Preferences.userNodeForPackage();
 
     Konfiguration svnConfig = new Konfiguration();
-
     svnConfig.setSvnUsername(inputSVNUsername);
     svnConfig.setSvnPassword(inputSVNPassword);
 
@@ -145,27 +131,20 @@ public class main {
     SvnHelperNeu svnHelper = new SvnHelperNeu();
     svnHelper.init(svnConfig);
 
-    // svnHelper.checkSVNLink("test");
-    // write funciton for checkout
-
     Map<String, LinkedList<Interface>> mapPrefixToOfferedInterfaces = new HashMap<String, LinkedList<Interface>>();
     Map<String, LinkedList<Interface>> mapPrefixToUsedInterfaces = new HashMap<String, LinkedList<Interface>>();
     List<Dependency> dsfddsfdsf = null;
 
     // 3. Step: Führe auf jedes Repository ein SVN-Checkout aus
-    for (int i = 0; i < column.size(); i++) {
+    for (int i = inputRowNumberValue; i < column.size(); i++) {
       String[] folder = new String[2];
-      // folder[0] = svnTempPath + "/Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
-      // folder[1] = svnTempPath + "/Vorlage-Register_bza_1.3.0_01";
 
-      // for (int i1 = 0; i1 < 2; i1++) {
       String url = column.get(i);
-      // String url = "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk/";
       SVNClientManager ourClientManager = SVNClientManager.newInstance();
       SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
       updateClient.setIgnoreExternals(false);
 
-      File f = new File(svnTempPath);
+      File f = new File(svnTempPath + "/" + i);
 
       SVNRepository repository = null;
       SVNURL svnUrl = null;
@@ -182,12 +161,12 @@ public class main {
         e.printStackTrace();
       }
 
-      try {
-        updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, true);
-      } catch (SVNException e) {
-        e.printStackTrace();
-        LOG.error("SVN Checkout error");
-      }
+      // try {
+      // updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, true);
+      // } catch (SVNException e) {
+      // e.printStackTrace();
+      // LOG.error("SVN Checkout error");
+      // }
 
       // 4. Step: Ableitung von POM-Modellen aus POM.xml's in den Repositories
       //
@@ -195,24 +174,26 @@ public class main {
       // -> 4.1 POM Modell der Hauptanwendung POM.xml
     }
 
-    File file = new File("/svn");
-    String[] directories2 = file.list(new FilenameFilter() {
+    String[] subFolders = null;
+    File file = new File(svnTempPath);
+    subFolders = file.list(new FilenameFilter() {
       @Override
       public boolean accept(File current, String name) {
 
         return new File(current, name).isDirectory();
       }
     });
-    System.out.println(Arrays.toString(directories2));
+    System.out.println(Arrays.toString(subFolders));
 
-    for (int i = 0; i < column.size(); i++) {
+    int sizeFolders = subFolders.length;
 
-      String pathParent = "sad";
+    for (int i = 0; i < sizeFolders; i++) {
+      String folderName = svnTempPath + "/" + subFolders[i];
 
       ParsePOM parsePOMinstance = null;
 
       try {
-        parsePOMinstance = new ParsePOM(pathParent + "/pom.xml", regEx);
+        parsePOMinstance = new ParsePOM(folderName + "/pom.xml", regEx);
       } catch (IOException e1) {
         // TODO Auto-generated catch block
         e1.printStackTrace();
@@ -238,23 +219,11 @@ public class main {
       String[] stockArr = new String[modules.size()];
       stockArr = modules.toArray(stockArr);
 
-      File file2 = new File(pathParent);
-
-      String[] directories = file2.list(new FilenameFilter() {
-        @Override
-        public boolean accept(File current, String name) {
-
-          return new File(current, name).isDirectory();
-        }
-      });
-
       // Identifizierung der Hauptanwendung durch Bestimmung der größten gemeinsamen Präfix
 
       String nameMainApplication = CommonUtils.longestCommonPrefix(stockArr);
-      LinkedList<Interface> interfaceNames = new LinkedList<Interface>();
 
-      String pathToMainApplication = pathParent + "/" + nameMainApplication;
-      String pathToMainApplicationPom = pathParent + "/" + nameMainApplication + "/pom.xml";
+      String pathToMainApplicationPom = folderName + "/" + nameMainApplication + "/pom.xml";
 
       ParsePOM parsePOMMainApplication = null;
       try {
@@ -333,16 +302,9 @@ public class main {
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
 
-        // get technical version
-
-        // propertiesInterface.put("applicaton", dependency.getVersion());
-
-        // db.addNode(NodeType.Interface, propertiesInterface, Pid);
         // Fallunterscheidug
         Map<String, String> propertiesRelation = new HashMap<String, String>();
-        // propertiesRelation.put("color", "green");
 
-        // db.addRelation(name, NodeType.Application, Pid, NodeType.Interface, propertiesRelation, RelationType.uses);
       }
 
     }
@@ -453,7 +415,6 @@ public class main {
      *
      *
      */
-
     // Beende die Verbindung mit der Datenbank
     db.shutdown();
   }
