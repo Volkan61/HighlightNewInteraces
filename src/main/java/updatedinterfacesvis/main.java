@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -147,19 +148,19 @@ public class main {
     // svnHelper.checkSVNLink("test");
     // write funciton for checkout
 
-    // 3. Step: Führe auf jedes Repository ein SVN-Checkout aus
-    // for (int i = 0; i < column.size(); i++) {
-    String[] folder = new String[2];
-    folder[0] = svnTempPath + "/Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
-    folder[1] = svnTempPath + "/Vorlage-Register_bza_1.3.0_01";
-
     Map<String, LinkedList<Interface>> mapPrefixToOfferedInterfaces = new HashMap<String, LinkedList<Interface>>();
     Map<String, LinkedList<Interface>> mapPrefixToUsedInterfaces = new HashMap<String, LinkedList<Interface>>();
     List<Dependency> dsfddsfdsf = null;
 
-    for (int i = 0; i < 2; i++) {
-      // String url = column.get(i);
-      String url = "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk/";
+    // 3. Step: Führe auf jedes Repository ein SVN-Checkout aus
+    for (int i = 0; i < column.size(); i++) {
+      String[] folder = new String[2];
+      // folder[0] = svnTempPath + "/Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
+      // folder[1] = svnTempPath + "/Vorlage-Register_bza_1.3.0_01";
+
+      // for (int i1 = 0; i1 < 2; i1++) {
+      String url = column.get(i);
+      // String url = "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk/";
       SVNClientManager ourClientManager = SVNClientManager.newInstance();
       SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
       updateClient.setIgnoreExternals(false);
@@ -192,8 +193,21 @@ public class main {
       //
       // -> 4.1 POM Modell des Parent POM.xml
       // -> 4.1 POM Modell der Hauptanwendung POM.xml
+    }
 
-      String pathParent = folder[i];
+    File file = new File("/svn");
+    String[] directories2 = file.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File current, String name) {
+
+        return new File(current, name).isDirectory();
+      }
+    });
+    System.out.println(Arrays.toString(directories2));
+
+    for (int i = 0; i < column.size(); i++) {
+
+      String pathParent = "sad";
 
       ParsePOM parsePOMinstance = null;
 
@@ -224,9 +238,9 @@ public class main {
       String[] stockArr = new String[modules.size()];
       stockArr = modules.toArray(stockArr);
 
-      File file = new File(pathParent);
+      File file2 = new File(pathParent);
 
-      String[] directories = file.list(new FilenameFilter() {
+      String[] directories = file2.list(new FilenameFilter() {
         @Override
         public boolean accept(File current, String name) {
 
@@ -264,16 +278,16 @@ public class main {
       node.setUsedInterfaces(usedInterfacesMainApplication);
       node.setOfferedInterfaces(offeredInterfacesMainApplication);
       nodesList.add(node);
-    }
 
+    }
     // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen ab.
 
     Neo4J db = new Neo4J(neo4J);
 
     for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
-      Node node = (Node) iterator.next();
+      Node node1 = (Node) iterator.next();
 
-      String name = node.getName();
+      String name = node1.getName();
 
       Map<String, String> properties = new HashMap<String, String>();
       // properties.put("PiD", "1");
@@ -282,7 +296,7 @@ public class main {
 
       db.addNode(NodeType.Application, properties, name);
 
-      List<Interface> offered = node.getOfferedInterfaces();
+      List<Interface> offered = node1.getOfferedInterfaces();
 
       for (Iterator iterator2 = offered.iterator(); iterator2.hasNext();) {
         Interface dependency = (Interface) iterator2.next();
@@ -305,7 +319,7 @@ public class main {
         db.addRelation(name, NodeType.Application, Pid, NodeType.Interface, propertiesRelation, RelationType.offers);
       }
 
-      List<Interface> used = node.getUsedInterfaces();
+      List<Interface> used = node1.getUsedInterfaces();
       for (Iterator iterator2 = used.iterator(); iterator2.hasNext();) {
         Interface dependency = (Interface) iterator2.next();
 
@@ -334,11 +348,11 @@ public class main {
     }
 
     for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
-      Node node = (Node) iterator.next();
+      Node node1 = (Node) iterator.next();
 
-      String sadsad = node.getName();
+      String sadsad = node1.getName();
 
-      List<Interface> used = node.getUsedInterfaces();
+      List<Interface> used = node1.getUsedInterfaces();
       for (Iterator iterator2 = used.iterator(); iterator2.hasNext();) {
         Interface usedInterface = (Interface) iterator2.next();
 
