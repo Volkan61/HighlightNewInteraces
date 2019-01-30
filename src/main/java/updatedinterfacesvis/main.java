@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -63,16 +65,11 @@ public class main {
       System.out.println(ex);
     }
 
-    /*
-     * logger.debug( "Meine Debug-Meldung" ); logger.info( "Meine Info-Meldung" ); logger.warn( "Meine Warn-Meldung" );
-     * logger.error( "Meine Error-Meldung" ); logger.fatal( "Meine Fatal-Meldung" );
-     */
-
     // 1. Lese Parameter aus der application.properties Datei ein
     Properties applicationProperties = new Properties();
     BufferedInputStream stream = null;
 
-    // Einlesen des Propertie-Files
+    // Einlesen des Property-Files
     try {
       stream = new BufferedInputStream(new FileInputStream("application.properties"));
     } catch (FileNotFoundException e2) {
@@ -103,19 +100,30 @@ public class main {
     int inputSheetNumberValue = Integer.parseInt(inputSheetNumber);
     String inputColumnNumber = applicationProperties.getProperty("column");
     int inputColumnNumberValue = Integer.parseInt(inputColumnNumber);
+
     String inputRowNumber = applicationProperties.getProperty("row");
     int inputRowNumberValue = Integer.parseInt(inputRowNumber);
     String svnTempPath = applicationProperties.getProperty("svnTemp");
+
+    String svnTempPathDelete = applicationProperties.getProperty("svnTempDelete");
+    boolean svnTempPathDeleteValue = Boolean.parseBoolean(svnTempPathDelete);
+
     String neo4J = applicationProperties.getProperty("neo4J");
+    String neo4JServer = applicationProperties.getProperty("neo4JServer");
+
+    String startNeo4JServer = applicationProperties.getProperty("startNeo4JServer");
+    boolean startNeo4JServerValue = Boolean.parseBoolean(startNeo4JServer);
+
     String regEx = applicationProperties.getProperty("regEx");
+
+    // Create SVNTemp Folder, if it's not exist
+    createFolderIfNotExist(svnTempPath);
 
     // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den Repositories
     List<String> column = ParseExcel.parse(inputSheetNumberValue, inputExcelPath, inputColumnNumberValue);
     LinkedList<Node> nodesList = new LinkedList<>();
     Nodes nodes = new Nodes();
     nodes.setNodes(nodesList);
-
-    // Preferences pdfds = Preferences.userNodeForPackage();
 
     Konfiguration svnConfig = new Konfiguration();
     svnConfig.setSvnUsername(inputSVNUsername);
@@ -247,10 +255,31 @@ public class main {
       node.setUsedInterfaces(usedInterfacesMainApplication);
       node.setOfferedInterfaces(offeredInterfacesMainApplication);
       nodesList.add(node);
-
     }
-    // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen ab.
 
+    // Leere svn Ordner mit Checkouts
+
+    if (svnTempPathDeleteValue) {
+      try {
+        deleteDirectoryRecursion(new File(svnTempPath));
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+
+    File theDir = new File(svnTempPath);
+    // if the directory does not exist, create it
+
+    // Lösche alte NEO4J Datenbank.
+    try {
+      deleteDirectoryRecursion(new File(neo4J));
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
+    // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen ab.
     Neo4J db = new Neo4J(neo4J);
 
     for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
@@ -417,6 +446,83 @@ public class main {
      */
     // Beende die Verbindung mit der Datenbank
     db.shutdown();
+
+    // Prüfe, ob Neo4J Server gestartet werden soll.
+    if (startNeo4JServerValue) {
+      // Erstelle BAT File
+      final File batFile = new File("run.bat");
+      try {
+        batFile.createNewFile();
+      } catch (IOException e2) {
+        // TODO Auto-generated catch block
+        e2.printStackTrace();
+      }
+      PrintWriter writer = null;
+      try {
+        writer = new PrintWriter(batFile, "UTF-8");
+      } catch (FileNotFoundException e1) {
+        // TODO Auto-generated catch block
+        e1.printStackTrace();
+      } catch (UnsupportedEncodingException e1) {
+        // TODO Auto-generated catch block
+        e1.printStackTrace();
+      }
+      writer.println("cd " + neo4JServer);
+      writer.println("neo4j console");
+      writer.close();
+
+      // Führe BAT File aus
+      Process p = null;
+      try {
+        p = Runtime.getRuntime().exec("cmd /c start run.bat");
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      try {
+        p.waitFor();
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
   }
 
+  /**
+   * @param theDir
+   */
+  private static void createFolderIfNotExist(String path) {
+
+    File theDir = new File(path);
+
+    if (!theDir.exists()) {
+      System.out.println("creating directory: " + theDir.getName());
+      boolean result = false;
+
+      try {
+        theDir.mkdir();
+        result = true;
+      } catch (SecurityException se) {
+        // handle it
+      }
+      if (result) {
+        // System.out.println("DIR created");
+      }
+    }
+  }
+
+  public static void deleteDirectoryRecursion(File file) throws IOException {
+
+    if (file.isDirectory()) {
+      File[] entries = file.listFiles();
+      if (entries != null) {
+        for (File entry : entries) {
+          deleteDirectoryRecursion(entry);
+        }
+      }
+    }
+    if (!file.delete()) {
+      throw new IOException("Failed to delete " + file);
+    }
+  }
 }
