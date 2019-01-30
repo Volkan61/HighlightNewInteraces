@@ -83,8 +83,8 @@ public class Neo4J {
 
     try (Transaction tx = this.graphDb.beginTx()) {
 
-      Node nodeOne = this.graphDb.findNode(nodeTypeOne, "Pid", nodeOneId);
-      Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "Pid", nodeTwoId);
+      Node nodeOne = this.graphDb.findNode(nodeTypeOne, "pid", nodeOneId);
+      Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "pid", nodeTwoId);
 
       Relationship relation = nodeOne.createRelationshipTo(nodeTwo, type);
       // relation.setProperty("test", "test");

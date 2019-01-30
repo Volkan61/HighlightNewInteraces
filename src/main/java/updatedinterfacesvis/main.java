@@ -8,13 +8,13 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.FileAppender;
@@ -62,7 +62,7 @@ public class main {
       // ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF:
       // LOG.setLevel(Level.WARN);
     } catch (Exception ex) {
-      System.out.println(ex);
+      LOG.debug(ex.getMessage());
     }
 
     // 1. Lese Parameter aus der application.properties Datei ein
@@ -78,12 +78,12 @@ public class main {
     try {
       applicationProperties.load(stream);
     } catch (IOException e2) {
-      LOG.debug(e2);
+      LOG.debug(e2.getMessage());
     }
     try {
       stream.close();
     } catch (IOException e2) {
-      LOG.debug(e2);
+      LOG.debug(e2.getMessage());
     }
 
     // Zugriff auf die Properties
@@ -160,14 +160,18 @@ public class main {
       try {
         svnUrl = SVNURL.parseURIEncoded(url);
       } catch (SVNException e1) {
-        e1.printStackTrace();
+        LOG.debug(e1.getMessage());
+
       }
 
       try {
         repository = SVNRepositoryFactory.create(svnUrl);
       } catch (SVNException e) {
-        e.printStackTrace();
+        LOG.debug(e.getMessage());
+
       }
+
+      System.out.println("SVN Checkout:" + svnUrl);
 
       // try {
       // updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, true);
@@ -191,7 +195,6 @@ public class main {
         return new File(current, name).isDirectory();
       }
     });
-    System.out.println(Arrays.toString(subFolders));
 
     int sizeFolders = subFolders.length;
 
@@ -203,16 +206,12 @@ public class main {
       try {
         parsePOMinstance = new ParsePOM(folderName + "/pom.xml", regEx);
       } catch (IOException e1) {
-        // TODO Auto-generated catch block
-        e1.printStackTrace();
+        LOG.debug(e1.getMessage());
       } catch (XmlPullParserException e1) {
-        // TODO Auto-generated catch block
-        e1.printStackTrace();
-      } catch (NullPointerException e1) {
+        LOG.debug(e1.getMessage());
 
-        // TODO Which project is not a maven project, print out!
-        e1.printStackTrace();
-        LOG.error("POM File not found");
+      } catch (NullPointerException e1) {
+        LOG.debug(e1.getMessage());
         continue;
       }
 
@@ -229,7 +228,50 @@ public class main {
 
       // Identifizierung der Hauptanwendung durch Bestimmung der größten gemeinsamen Präfix
 
-      String nameMainApplication = CommonUtils.longestCommonPrefix(stockArr);
+      HashMap<String, Integer> countPrefix = new HashMap<>();
+      for (int j = 0; j < stockArr.length; j++) {
+        String a = stockArr[j];
+        for (int j2 = 0; j2 < stockArr.length; j2++) {
+          if (j != j2) {
+            String b = stockArr[j2];
+
+            String[] stringArray = new String[2];
+            stringArray[0] = a;
+            stringArray[1] = b;
+
+            String longestCmmPrefix = CommonUtils.longestCommonPrefix(stringArray);
+
+            Integer sads = countPrefix.get(longestCmmPrefix);
+
+            if (sads == null) {
+              countPrefix.put(longestCmmPrefix, 1);
+            } else {
+              countPrefix.put(longestCmmPrefix, sads + 1);
+
+            }
+          }
+        }
+      }
+
+      Set<String> countPrefixKeySet = countPrefix.keySet();
+      int countMax = 0;
+      String countMaxKey = "";
+
+      for (Iterator iterator = countPrefixKeySet.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+
+        Integer count = countPrefix.get(string);
+        if (count > countMax) {
+          countMax = count;
+          countMaxKey = string;
+        }
+      }
+
+      if (countMaxKey.charAt(countMaxKey.length() - 1) == '-') {
+        countMaxKey = (String) countMaxKey.subSequence(0, countMaxKey.length() - 1);
+      }
+
+      String nameMainApplication = countMaxKey;
 
       String pathToMainApplicationPom = folderName + "/" + nameMainApplication + "/pom.xml";
 
@@ -237,8 +279,9 @@ public class main {
       try {
         parsePOMMainApplication = new ParsePOM(pathToMainApplicationPom, regEx);
       } catch (IOException | XmlPullParserException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+
+        LOG.debug(e.getMessage());
+
       }
 
       parsePOMMainApplication.extractInformationFromPOMModel(parentModuleModel);
@@ -263,8 +306,7 @@ public class main {
       try {
         deleteDirectoryRecursion(new File(svnTempPath));
       } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        LOG.debug(e.getMessage());
       }
     }
 
@@ -275,8 +317,7 @@ public class main {
     try {
       deleteDirectoryRecursion(new File(neo4J));
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.debug(e.getMessage());
     }
 
     // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen ab.
@@ -288,8 +329,8 @@ public class main {
       String name = node1.getName();
 
       Map<String, String> properties = new HashMap<String, String>();
-      // properties.put("PiD", "1");
-      properties.put("Pid", name);
+      // properties.put("pid", "1");
+      properties.put("pid", name);
       properties.put("name", name);
 
       db.addNode(NodeType.Application, properties, name);
@@ -302,9 +343,9 @@ public class main {
         Map<String, String> propertiesInterface = new HashMap<String, String>();
         String InterfaceName = dependency.getName();
         String Pid = dependency.getId();
-        propertiesInterface.put("Pid", Pid);
+        propertiesInterface.put("pid", Pid);
         propertiesInterface.put("name", InterfaceName);
-        propertiesInterface.put("version", dependency.getVersion());
+        propertiesInterface.put("businessVersion", dependency.getVersion());
         // get technical version
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
@@ -313,7 +354,7 @@ public class main {
 
         Map<String, String> propertiesRelation = new HashMap<String, String>();
 
-        // properties.put("PiD", "1");
+        // properties.put("pid", "1");
         db.addRelation(name, NodeType.Application, Pid, NodeType.Interface, propertiesRelation, RelationType.offers);
       }
 
@@ -325,9 +366,9 @@ public class main {
 
         String InterfaceName = dependency.getName();
         String Pid = dependency.getId();
-        propertiesInterface.put("Pid", Pid);
+        propertiesInterface.put("pid", Pid);
         propertiesInterface.put("name", InterfaceName);
-        propertiesInterface.put("version", dependency.getVersion());
+        propertiesInterface.put("businessVersion", dependency.getVersion());
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
 
@@ -358,9 +399,9 @@ public class main {
 
           String InterfaceName = usedInterface.getName();
           String Pid = usedInterface.getId();
-          propertiesInterface.put("Pid", Pid);
+          propertiesInterface.put("pid", Pid);
           propertiesInterface.put("name", InterfaceName);
-          propertiesInterface.put("version", usedInterface.getVersion());
+          propertiesInterface.put("businessVersion", usedInterface.getVersion());
           // get technical version
           String technical = usedInterface.getTechnicalVersion();
           propertiesInterface.put("technicalVersion", technical);
@@ -454,18 +495,15 @@ public class main {
       try {
         batFile.createNewFile();
       } catch (IOException e2) {
-        // TODO Auto-generated catch block
-        e2.printStackTrace();
+        LOG.debug(e2.getMessage());
       }
       PrintWriter writer = null;
       try {
         writer = new PrintWriter(batFile, "UTF-8");
       } catch (FileNotFoundException e1) {
         // TODO Auto-generated catch block
-        e1.printStackTrace();
       } catch (UnsupportedEncodingException e1) {
         // TODO Auto-generated catch block
-        e1.printStackTrace();
       }
       writer.println("cd " + neo4JServer);
       writer.println("neo4j console");
@@ -476,14 +514,12 @@ public class main {
       try {
         p = Runtime.getRuntime().exec("cmd /c start run.bat");
       } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        LOG.debug(e.getMessage());
       }
       try {
         p.waitFor();
       } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        LOG.debug(e.getMessage());
       }
     }
   }
