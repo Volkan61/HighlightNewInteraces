@@ -30,7 +30,6 @@ public class XMLUtils {
     try {
       docBuilder = docFactory.newDocumentBuilder();
     } catch (ParserConfigurationException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
 
@@ -62,7 +61,6 @@ public class XMLUtils {
     try {
       transformer.transform(new DOMSource(doc), new StreamResult(writer));
     } catch (TransformerException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
 

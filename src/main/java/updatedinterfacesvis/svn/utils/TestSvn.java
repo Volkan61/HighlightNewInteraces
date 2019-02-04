@@ -51,7 +51,6 @@ public class TestSvn {
     try {
       svnUrl = SVNURL.parseURIEncoded(url);
     } catch (SVNException e1) {
-      // TODO Auto-generated catch block
       e1.printStackTrace();
     }
 

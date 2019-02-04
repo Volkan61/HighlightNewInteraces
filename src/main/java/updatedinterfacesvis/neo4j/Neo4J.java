@@ -32,12 +32,12 @@ public class Neo4J {
     this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(a);
   }
 
-  public void addNode(NodeType nodeType, Map<String, Integer> properties) {
+  public void addNode(NodeType nodeType, Map<String, String> properties) {
 
     try (Transaction tx = this.graphDb.beginTx()) {
       // Database operations go here
 
-      Node bobNode = this.graphDb.createNode(NodeType.Application);
+      Node bobNode = this.graphDb.createNode(nodeType);
 
       Set<String> keySet = properties.keySet();
 

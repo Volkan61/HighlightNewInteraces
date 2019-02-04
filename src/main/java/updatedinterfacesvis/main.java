@@ -350,7 +350,7 @@ public class main {
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
 
-        db.addNode(NodeType.Interface, propertiesInterface, InterfaceName);
+        db.addNode(NodeType.Interface, propertiesInterface);
 
         Map<String, String> propertiesRelation = new HashMap<String, String>();
 
@@ -382,7 +382,7 @@ public class main {
     for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
       Node node1 = (Node) iterator.next();
 
-      String sadsad = node1.getName();
+      String applicationName = node1.getName();
 
       List<Interface> used = node1.getUsedInterfaces();
       for (Iterator iterator2 = used.iterator(); iterator2.hasNext();) {
@@ -397,18 +397,25 @@ public class main {
 
         if (checkNode == null) {
 
-          String InterfaceName = usedInterface.getName();
-          String Pid = usedInterface.getId();
-          propertiesInterface.put("pid", Pid);
-          propertiesInterface.put("name", InterfaceName);
+          String interfaceName = usedInterface.getName();
+          String pId = usedInterface.getId();
+          propertiesInterface.put("pid", pId);
+          propertiesInterface.put("name", interfaceName);
           propertiesInterface.put("businessVersion", usedInterface.getVersion());
           // get technical version
           String technical = usedInterface.getTechnicalVersion();
           propertiesInterface.put("technicalVersion", technical);
 
+          db.addNode(NodeType.Interface, propertiesInterface);
+
+          db.addRelation(applicationName, NodeType.Application, usedInterface.getId(), NodeType.Interface,
+              propertiesRelation, RelationType.uses);
+
+          // TODO: Relation used but not offered! Solved 04.02.2018
+
         } else {
-          db.addRelation(sadsad, NodeType.Application, usedInterface.getId(), NodeType.Interface, propertiesRelation,
-              RelationType.uses);
+          db.addRelation(applicationName, NodeType.Application, usedInterface.getId(), NodeType.Interface,
+              propertiesRelation, RelationType.uses);
 
         }
       }
@@ -501,9 +508,8 @@ public class main {
       try {
         writer = new PrintWriter(batFile, "UTF-8");
       } catch (FileNotFoundException e1) {
-        // TODO Auto-generated catch block
+        //
       } catch (UnsupportedEncodingException e1) {
-        // TODO Auto-generated catch block
       }
       writer.println("cd " + neo4JServer);
       writer.println("neo4j console");

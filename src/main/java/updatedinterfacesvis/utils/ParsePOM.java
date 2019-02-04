@@ -52,8 +52,6 @@ public class ParsePOM {
     this.regEx = regEx;
     File f = new File(pathToPOMFile);
     this.pomModel = Util.getModelFromPOM(f);
-    // TODO Auto-generated catch block
-    // TODO Auto-generated catch block
   }
 
   private List<String> filterStrings(List<String> modules) {
@@ -131,7 +129,17 @@ public class ParsePOM {
 
       char checkChar = Id.charAt(index + 1);
 
-      String technicalVersion = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+      // TODO technical version aus der Hauptanwedung extrahieren.
+      String technicalVersion = null;
+
+      String resultTechnicalVersionFromPom = getInterfaceTechnicalVersion(this.dependencies, Id);
+      String resultTechnicalVersionFromParentPom = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+
+      if (resultTechnicalVersionFromPom != null) {
+        technicalVersion = resultTechnicalVersionFromPom;
+      } else if (resultTechnicalVersionFromParentPom != null) {
+        technicalVersion = resultTechnicalVersionFromParentPom;
+      }
 
       double versionDobule = 0;
       String version = "0";
@@ -155,8 +163,16 @@ public class ParsePOM {
 
       char sadasd = Id.charAt(index + 1);
 
-      String technicalVersion = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+      String technicalVersion = null;
 
+      String resultTechnicalVersionFromPom = getInterfaceTechnicalVersion(this.dependencies, Id);
+      String resultTechnicalVersionFromParentPom = getInterfaceTechnicalVersion(dependencyManagementDependencies, Id);
+
+      if (resultTechnicalVersionFromPom != null) {
+        technicalVersion = resultTechnicalVersionFromPom;
+      } else if (resultTechnicalVersionFromParentPom != null) {
+        technicalVersion = resultTechnicalVersionFromParentPom;
+      }
       double versionDobule = 0;
       String version = "0";
       String name = Id;
