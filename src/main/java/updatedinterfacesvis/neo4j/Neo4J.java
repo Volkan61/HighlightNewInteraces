@@ -27,7 +27,8 @@ public class Neo4J {
 
   public Neo4J(String path) {
 
-    // File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" + "/data/databases/graph.db");
+    // File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" +
+    // "/data/databases/graph.db");
     File a = new File(path);
     this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(a);
   }
@@ -90,6 +91,16 @@ public class Neo4J {
       // relation.setProperty("test", "test");
 
       tx.success();
+    } finally {
+    }
+  }
+
+  public boolean findNode(String nodeId) {
+
+    try (Transaction tx = this.graphDb.beginTx()) {
+      Node node = this.graphDb.findNode(NodeType.Interface, "pid", nodeId);
+      tx.success();
+      return node != null;
     } finally {
     }
   }

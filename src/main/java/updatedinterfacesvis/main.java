@@ -125,7 +125,8 @@ public class main {
     // Create SVNTemp Folder, if it's not exist
     createFolderIfNotExist(svnTempPath);
 
-    // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den Repositories
+    // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den
+    // Repositories
     List<String> columnExcelRepositoryLinks = ParseExcel.parse(inputSheetNumberValue, inputExcelPath,
         inputColumnNumberRepositoriesValue);
 
@@ -165,7 +166,8 @@ public class main {
 
       String url = columnExcelRepositoryLinks.get(i);
 
-      // String url = "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk";
+      // String url =
+      // "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk";
       if (url.charAt(url.length() - 1) != '/') {
         url = url + '/';
       }
@@ -304,7 +306,8 @@ public class main {
       String[] stockArr = new String[modules.size()];
       stockArr = modules.toArray(stockArr);
 
-      // Identifizierung der Hauptanwendung durch Bestimmung der größten gemeinsamen Präfix
+      // Identifizierung der Hauptanwendung durch Bestimmung der größten gemeinsamen
+      // Präfix
 
       HashMap<String, Integer> countPrefix = new HashMap<>();
       for (int j = 0; j < stockArr.length; j++) {
@@ -370,7 +373,8 @@ public class main {
       mapPrefixToOfferedInterfaces.put(nameMainApplication, (LinkedList<Interface>) offeredInterfacesMainApplication);
       mapPrefixToUsedInterfaces.put(nameMainApplication, (LinkedList<Interface>) usedInterfacesMainApplication);
 
-      // String pathMainApplication = "C:\\Users\\vhacimuf\\Desktop\\TWS-4\\Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
+      // String pathMainApplication =
+      // "C:\\Users\\vhacimuf\\Desktop\\TWS-4\\Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
       Node node = new Node();
       node.setName(nameMainApplication);
       node.setUsedInterfaces(usedInterfacesMainApplication);
@@ -398,7 +402,8 @@ public class main {
       LOG.debug(e.getMessage());
     }
 
-    // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen ab.
+    // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen
+    // ab.
     Neo4J db = new Neo4J(neo4J);
 
     for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
@@ -484,11 +489,12 @@ public class main {
           String technical = usedInterface.getTechnicalVersion();
           propertiesInterface.put("technicalVersion", technical);
 
-          db.addNode(NodeType.Interface, propertiesInterface);
+          if (!db.findNode(pId)) {
+            db.addNode(NodeType.Interface, propertiesInterface);
+          }
 
           db.addRelation(applicationName, NodeType.Application, usedInterface.getId(), NodeType.Interface,
               propertiesRelation, RelationType.uses);
-
           // TODO: Relation used but not offered! Solved 04.02.2018
 
         } else {
