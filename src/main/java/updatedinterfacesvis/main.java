@@ -24,11 +24,13 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.tmatesoft.svn.core.SVNDepth;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 import org.tmatesoft.svn.core.wc.SVNClientManager;
+import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
 import updatedinterfacesvis.model.Interface;
@@ -98,8 +100,12 @@ public class main {
     String inputExcelPath = applicationProperties.getProperty("excel");
     String inputSheetNumber = applicationProperties.getProperty("sheet");
     int inputSheetNumberValue = Integer.parseInt(inputSheetNumber);
-    String inputColumnNumber = applicationProperties.getProperty("column");
-    int inputColumnNumberValue = Integer.parseInt(inputColumnNumber);
+    String inputColumnNumberRepositories = applicationProperties.getProperty("columnRepositoryLinks");
+    int inputColumnNumberRepositoriesValue = Integer.parseInt(inputColumnNumberRepositories);
+
+    String inputColumnNumberRepositoryNames = applicationProperties.getProperty("columnRepositoryNames");
+
+    int inputColumnNumberRepositoryNamesValue = Integer.parseInt(inputColumnNumberRepositoryNames);
 
     String inputRowNumber = applicationProperties.getProperty("row");
     int inputRowNumberValue = Integer.parseInt(inputRowNumber);
@@ -120,7 +126,14 @@ public class main {
     createFolderIfNotExist(svnTempPath);
 
     // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den Repositories
-    List<String> column = ParseExcel.parse(inputSheetNumberValue, inputExcelPath, inputColumnNumberValue);
+    List<String> columnExcelRepositoryLinks = ParseExcel.parse(inputSheetNumberValue, inputExcelPath,
+        inputColumnNumberRepositoriesValue);
+
+    List<String> columnExcelRepositoryNames = null;
+    if (inputColumnNumberRepositoryNamesValue >= 0)
+      columnExcelRepositoryNames = ParseExcel.parse(inputSheetNumberValue, inputExcelPath,
+          inputColumnNumberRepositoryNamesValue);
+
     LinkedList<Node> nodesList = new LinkedList<>();
     Nodes nodes = new Nodes();
     nodes.setNodes(nodesList);
@@ -144,15 +157,30 @@ public class main {
     List<Dependency> dsfddsfdsf = null;
 
     // 3. Step: Führe auf jedes Repository ein SVN-Checkout aus
-    for (int i = inputRowNumberValue; i < column.size(); i++) {
+
+    boolean useRepositoryNames = inputColumnNumberRepositoryNamesValue >= 0;
+
+    for (int i = inputRowNumberValue; i < columnExcelRepositoryLinks.size(); i++) {
       String[] folder = new String[2];
 
-      String url = column.get(i);
+      String url = columnExcelRepositoryLinks.get(i);
+
+      // String url = "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk";
+      if (url.charAt(url.length() - 1) != '/') {
+        url = url + '/';
+      }
+
       SVNClientManager ourClientManager = SVNClientManager.newInstance();
       SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
       updateClient.setIgnoreExternals(false);
 
-      File f = new File(svnTempPath + "/" + i);
+      File f = null;
+      if (useRepositoryNames) {
+        String repositoryName = columnExcelRepositoryNames.get(i);
+        f = new File(svnTempPath + "/" + repositoryName);
+      } else {
+        f = new File(svnTempPath + "/" + i);
+      }
 
       SVNRepository repository = null;
       SVNURL svnUrl = null;
@@ -161,7 +189,6 @@ public class main {
         svnUrl = SVNURL.parseURIEncoded(url);
       } catch (SVNException e1) {
         LOG.debug(e1.getMessage());
-
       }
 
       try {
@@ -171,14 +198,65 @@ public class main {
 
       }
 
-      System.out.println("SVN Checkout:" + svnUrl);
+      System.out.println("SVN Checkout: " + svnUrl);
 
-      // try {
-      // updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, true);
-      // } catch (SVNException e) {
-      // e.printStackTrace();
-      // LOG.error("SVN Checkout error");
-      // }
+      try {
+
+        updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
+      } catch (SVNException e) {
+        e.printStackTrace();
+        LOG.error("SVN Checkout error");
+      }
+
+      // Ordner checkouten
+
+      String[] subFolders = null;
+      subFolders = f.list(new FilenameFilter() {
+        @Override
+        public boolean accept(File current, String name) {
+
+          return new File(current, name).isDirectory();
+        }
+      });
+
+      LinkedList<String> subFoldersDynamicList = new LinkedList<>();
+
+      for (int j = 0; j < subFolders.length; j++) {
+        subFoldersDynamicList.add(subFolders[j]);
+      }
+
+      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+
+        boolean isPoint = string.charAt(0) == '.';
+
+        if (isPoint)
+          iterator.remove();
+
+      }
+
+      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+
+        try {
+          svnUrl = SVNURL.parseURIEncoded(url + string);
+        } catch (SVNException e1) {
+          LOG.debug(e1.getMessage());
+        }
+        try {
+          repository = SVNRepositoryFactory.create(svnUrl);
+        } catch (SVNException e) {
+          LOG.debug(e.getMessage());
+        }
+        try {
+
+          File g = new File(f.getPath() + "/" + string);
+          updateClient.doCheckout(svnUrl, g, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
+        } catch (SVNException e) {
+          e.printStackTrace();
+          LOG.error("SVN Checkout error");
+        }
+      }
 
       // 4. Step: Ableitung von POM-Modellen aus POM.xml's in den Repositories
       //

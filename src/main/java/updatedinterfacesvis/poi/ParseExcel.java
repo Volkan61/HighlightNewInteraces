@@ -32,7 +32,7 @@ public class ParseExcel {
       for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
         Row row = sheet.getRow(rowIndex);
         if (row != null) {
-          Cell cell = row.getCell(8);
+          Cell cell = row.getCell(columnIndex);
           if (cell != null) {
             // Found column and there is value in the cell.
             String cellValueMaybeNull = cell.getStringCellValue();
