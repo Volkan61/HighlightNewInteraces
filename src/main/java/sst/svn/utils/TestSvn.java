@@ -1,4 +1,4 @@
-package updatedinterfacesvis.svn.utils;
+package sst.svn.utils;
 
 import java.io.File;
 
@@ -11,7 +11,7 @@ import org.tmatesoft.svn.core.wc.SVNClientManager;
 import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
-import updatedinterfacesvis.svn.config.Konfiguration;
+import sst.svn.config.Konfiguration;
 
 /**
  * @author vhacimuf

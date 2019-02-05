@@ -1,4 +1,4 @@
-package updatedinterfacesvis.utils;
+package sst.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,16 +14,16 @@ import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-import updatedinterfacesvis.model.Interface;
+import sst.model.Interface;
 
 /**
- * Hello world!
+ * Eine Klasse mit Funktionalitäten für das Parsen von pom.xml Dateien aus einem Maven Projekt. Für eine Anwendung
+ * werden alle angebotenen und verwendeten Schnittstellen extrahiert.
  *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
 public class ParsePOM {
-  /**
-   * @param args
-   */
 
   private Model pomModel = null;
 
@@ -41,12 +41,6 @@ public class ParsePOM {
 
   private String regEx;
 
-  /**
-   * The constructor.
-   *
-   * @throws XmlPullParserException
-   * @throws IOException
-   */
   public ParsePOM(String pathToPOMFile, String regEx) throws IOException, XmlPullParserException {
 
     this.regEx = regEx;
@@ -54,14 +48,16 @@ public class ParsePOM {
     this.pomModel = Util.getModelFromPOM(f);
   }
 
+  /*
+   * Bekommt eine Liste von Modulen entgegen und filtert diejenigen Module aus, die den regulären String regEx nicht
+   * enthalten.
+   */
   private List<String> filterStrings(List<String> modules) {
 
     List<String> result = new ArrayList<String>();
 
     for (Iterator iter = modules.iterator(); iter.hasNext();) {
       String string = (String) iter.next();
-
-      // boolean containsString = string.toLowerCase().contains(str.toLowerCase());
 
       boolean containsString = string.toLowerCase().matches(this.regEx);
 
@@ -75,6 +71,9 @@ public class ParsePOM {
     return result;
   }
 
+  /*
+   * Analog zur vorigen Methode. Alle Dependency werden ausgefiltert, die den regulären String regEx nicht enthalten.
+   */
   private List<Dependency> filterDependencies(List<Dependency> modules) {
 
     List<Dependency> result = new ArrayList<Dependency>();
@@ -95,6 +94,11 @@ public class ParsePOM {
     return result;
   }
 
+  /*
+   * Bekommt als Paramenter das parent pom.xml übergeben. Aus dem modules Bereich des parent pom kann geschlussfolgert
+   * werden, welche Interfaces die Anwendung nach außen bereitstellt, sowie Informationen extrahiert, welche
+   * Business-Version und Technical-Version die Schnittstellen haben.
+   */
   public void extractInformationFromPOMModel(Model parentModuleModel) {
 
     List<Dependency> offeredInterfaces = new LinkedList<Dependency>();
@@ -129,7 +133,6 @@ public class ParsePOM {
 
       char checkChar = Id.charAt(index + 1);
 
-      // TODO technical version aus der Hauptanwedung extrahieren.
       String technicalVersion = null;
 
       String resultTechnicalVersionFromPom = getInterfaceTechnicalVersion(this.dependencies, Id);
@@ -210,6 +213,10 @@ public class ParsePOM {
     }
   }
 
+  /*
+   * Bekommt eine List von Dependencies übergeben und gibt die technische Version der Dependency aus, die als Artifact
+   * Id dem übergebenen Artifact Id entspricht.
+   */
   public String getInterfaceTechnicalVersion(List<Dependency> listOfDependencies, String artifactId) {
 
     Dependency dep = null;

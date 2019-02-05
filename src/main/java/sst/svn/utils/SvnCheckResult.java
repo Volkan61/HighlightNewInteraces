@@ -1,4 +1,4 @@
-package updatedinterfacesvis.svn.utils;
+package sst.svn.utils;
 
 /**
  * @author Capgemini, Thomas Timu

@@ -1,4 +1,4 @@
-package updatedinterfacesvis.svn.config;
+package sst.svn.config;
 
 /**
  * Konfigurations.

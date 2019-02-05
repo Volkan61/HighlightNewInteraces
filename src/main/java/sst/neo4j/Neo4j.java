@@ -1,4 +1,4 @@
-package updatedinterfacesvis.neo4j;
+package sst.neo4j;
 
 import java.io.File;
 import java.util.Iterator;
@@ -14,29 +14,26 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
-public class Neo4J {
+public class Neo4j {
 
   GraphDatabaseService graphDb;
 
-  /**
-   * The constructor.
-   */
+  public Neo4j(String path) {
 
-  public Neo4J(String path) {
-
-    // File a = new File("/Users/vhacimuf/Desktop/neo4j-community-3.5.1" +
-    // "/data/databases/graph.db");
     File a = new File(path);
     this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(a);
   }
 
+  /*
+   * Fügt einen Knoten in die Graphendatenbank hinzu.
+   */
+
   public void addNode(NodeType nodeType, Map<String, String> properties) {
 
     try (Transaction tx = this.graphDb.beginTx()) {
-      // Database operations go here
 
       Node bobNode = this.graphDb.createNode(nodeType);
 
@@ -50,6 +47,10 @@ public class Neo4J {
     } finally {
     }
   }
+
+  /*
+   * Fügt einen Knoten in die Graphendatenbank hinzu.
+   */
 
   public void addNode(NodeType nodeType, Map<String, String> properties, String label) {
 
@@ -79,6 +80,10 @@ public class Neo4J {
     this.graphDb.shutdown();
   }
 
+  /*
+   * Fügt eine Relation in die Graphendatenbank hinzu.
+   */
+
   public void addRelation(String nodeOneId, NodeType nodeTypeOne, String nodeTwoId, NodeType nodeTypeTwo,
       Map<String, String> properties, RelationType type) {
 
@@ -88,17 +93,20 @@ public class Neo4J {
       Node nodeTwo = this.graphDb.findNode(nodeTypeTwo, "pid", nodeTwoId);
 
       Relationship relation = nodeOne.createRelationshipTo(nodeTwo, type);
-      // relation.setProperty("test", "test");
 
       tx.success();
     } finally {
     }
   }
 
+  /*
+   * Überprüft ob ein Knoten mit dem übergebenen Id in der Graphendatenbank existiert.
+   */
+
   public boolean findNode(String nodeId) {
 
     try (Transaction tx = this.graphDb.beginTx()) {
-      Node node = this.graphDb.findNode(NodeType.Interface, "pid", nodeId);
+      Node node = this.graphDb.findNode(NodeType.INTERFACE, "pid", nodeId);
       tx.success();
       return node != null;
     } finally {
@@ -106,10 +114,10 @@ public class Neo4J {
   }
 
   public enum NodeType implements Label {
-    Application, Interface
+    APPLICATION, INTERFACE
   }
 
   public enum RelationType implements RelationshipType {
-    uses, offers, Interface, Connection, Oldversion
+    USES, OFFERS
   }
 }

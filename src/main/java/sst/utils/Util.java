@@ -1,4 +1,4 @@
-package updatedinterfacesvis.utils;
+package sst.utils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,8 +10,8 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
 public class Util {
 
@@ -24,6 +24,7 @@ public class Util {
    * @throws XmlPullParserException
    * @throws IOException
    */
+
   public static Model getModelFromPOM(File pom) throws IOException, XmlPullParserException {
 
     Model model = null;

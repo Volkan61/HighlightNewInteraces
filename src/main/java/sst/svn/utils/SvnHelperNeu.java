@@ -1,4 +1,4 @@
-package updatedinterfacesvis.svn.utils;
+package sst.svn.utils;
 
 /*
  * ====================================================================
@@ -30,7 +30,7 @@ import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 
-import updatedinterfacesvis.svn.config.Konfiguration;
+import sst.svn.config.Konfiguration;
 
 /**
  *

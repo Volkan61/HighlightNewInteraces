@@ -1,3 +1,3 @@
-MATCH  (node1)-[:offers]->(node2)
-WHERE NOT (node2)<-[:uses]-(:Application)
+MATCH  (node1)-[:OFFERS]->(node2)
+WHERE NOT (node2)<-[:USES]-(:APPLICATION)
 RETURN (node2)

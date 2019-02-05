@@ -1,11 +1,14 @@
-package updatedinterfacesvis.utils;
+package sst.utils;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
 public class CommonUtils {
 
+  /*
+   * Bestimmt das größtmögliche Präfix von einem String-Array
+   */
   public static String longestCommonPrefix(String[] strings) {
 
     if (strings.length == 0) {

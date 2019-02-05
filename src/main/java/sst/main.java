@@ -1,4 +1,4 @@
-package updatedinterfacesvis;
+package sst;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -33,22 +33,26 @@ import org.tmatesoft.svn.core.wc.SVNClientManager;
 import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
-import updatedinterfacesvis.model.Interface;
-import updatedinterfacesvis.model.Node;
-import updatedinterfacesvis.model.Nodes;
-import updatedinterfacesvis.neo4j.Neo4J;
-import updatedinterfacesvis.neo4j.Neo4J.NodeType;
-import updatedinterfacesvis.neo4j.Neo4J.RelationType;
-import updatedinterfacesvis.poi.ParseExcel;
-import updatedinterfacesvis.svn.config.Konfiguration;
-import updatedinterfacesvis.svn.utils.SvnHelperNeu;
-import updatedinterfacesvis.utils.CommonUtils;
-import updatedinterfacesvis.utils.ParsePOM;
+import sst.model.Interface;
+import sst.model.Node;
+import sst.model.ModelUtils;
+import sst.neo4j.Neo4j;
+import sst.neo4j.Neo4j.NodeType;
+import sst.neo4j.Neo4j.RelationType;
+import sst.poi.ParseExcel;
+import sst.svn.config.Konfiguration;
+import sst.svn.utils.SvnHelperNeu;
+import sst.utils.CommonUtils;
+import sst.utils.ParsePOM;
 
 /**
- * @author vhacimuf
+ * Extraktion von Relationen zwischen Anwendungen und Generierung einer NEO4J Datenbank zur Visualisierung des Graphes
+ * und Ableitung von neuen Erkenntnissen.
  *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
+
 public class main {
 
   private static final Logger LOG = Logger.getLogger("Main");
@@ -61,17 +65,15 @@ public class main {
       LOG.addAppender(consoleAppender);
       FileAppender fileAppender = new FileAppender(layout, "logs/default.log", false);
       LOG.addAppender(fileAppender);
-      // ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF:
-      // LOG.setLevel(Level.WARN);
     } catch (Exception ex) {
       LOG.debug(ex.getMessage());
     }
 
-    // 1. Lese Parameter aus der application.properties Datei ein
+    // 1 Lese Parameter aus der application.properties Datei ein
     Properties applicationProperties = new Properties();
     BufferedInputStream stream = null;
 
-    // Einlesen des Property-Files
+    // 1.1 Einlesen des Property-Files
     try {
       stream = new BufferedInputStream(new FileInputStream("application.properties"));
     } catch (FileNotFoundException e2) {
@@ -88,7 +90,9 @@ public class main {
       LOG.debug(e2.getMessage());
     }
 
-    // Zugriff auf die Properties
+    /*
+     * Zugriff auf die Properties
+     */
     String inputSVNUrl = applicationProperties.getProperty("svnUrl");
     String inputSVNUsername = applicationProperties.getProperty("svnUsername");
     String inputSVNPassword = applicationProperties.getProperty("svnPassword");
@@ -102,43 +106,49 @@ public class main {
     int inputSheetNumberValue = Integer.parseInt(inputSheetNumber);
     String inputColumnNumberRepositories = applicationProperties.getProperty("columnRepositoryLinks");
     int inputColumnNumberRepositoriesValue = Integer.parseInt(inputColumnNumberRepositories);
-
     String inputColumnNumberRepositoryNames = applicationProperties.getProperty("columnRepositoryNames");
-
     int inputColumnNumberRepositoryNamesValue = Integer.parseInt(inputColumnNumberRepositoryNames);
-
     String inputRowNumber = applicationProperties.getProperty("row");
     int inputRowNumberValue = Integer.parseInt(inputRowNumber);
     String svnTempPath = applicationProperties.getProperty("svnTemp");
-
     String svnTempPathDelete = applicationProperties.getProperty("svnTempDelete");
     boolean svnTempPathDeleteValue = Boolean.parseBoolean(svnTempPathDelete);
-
     String neo4J = applicationProperties.getProperty("neo4J");
     String neo4JServer = applicationProperties.getProperty("neo4JServer");
-
     String startNeo4JServer = applicationProperties.getProperty("startNeo4JServer");
     boolean startNeo4JServerValue = Boolean.parseBoolean(startNeo4JServer);
 
     String regEx = applicationProperties.getProperty("regEx");
 
-    // Create SVNTemp Folder, if it's not exist
+    /*
+     * Der SVNTemp Ordner soll erstellt werden, falls dieser noch nicht existiert. In diesem Ordner werden die SVN
+     * Checkouts hinterlegt.
+     */
     createFolderIfNotExist(svnTempPath);
 
-    // 2. Step: Greife auf die Exceltabelle zu und extrahiere Spalte mit den
-    // Repositories
+    /*
+     * 2. Für jede Anwendung existiert ein SVN Repository. Die URL's zu den Repositories sind in einer Excel Tabelle
+     * hinterlegt. In diesem Schritt erfolgt der Zugriff auf die Exceltabelle und die Extraktion der Repository-Links.
+     */
     List<String> columnExcelRepositoryLinks = ParseExcel.parse(inputSheetNumberValue, inputExcelPath,
         inputColumnNumberRepositoriesValue);
 
+    /*
+     * Jedes Repository wird im SVNTemp in einem Ordner hinterlegt. Um den Ordner aussagekräftige Namen zu vergeben,
+     * können die Namen der Repositories aus der Exceltabelle extrahiert werden. Die Spalte, in der sich die Namen
+     * befinden, muss im Property File festgelegt werden.
+     */
     List<String> columnExcelRepositoryNames = null;
     if (inputColumnNumberRepositoryNamesValue >= 0)
       columnExcelRepositoryNames = ParseExcel.parse(inputSheetNumberValue, inputExcelPath,
           inputColumnNumberRepositoryNamesValue);
 
-    LinkedList<Node> nodesList = new LinkedList<>();
-    Nodes nodes = new Nodes();
-    nodes.setNodes(nodesList);
+    LinkedList<Node> nodes = new LinkedList<>();
 
+    /*
+     * Dieser Schritt ist nur nötig, falls für ein SVN Checkout eine Authentifizierung benötigt wird. In diesem Falle
+     * muss das SVN Zertifikat und das SVN Zertifikatpasswort übergeben werden.
+     */
     Konfiguration svnConfig = new Konfiguration();
     svnConfig.setSvnUsername(inputSVNUsername);
     svnConfig.setSvnPassword(inputSVNPassword);
@@ -157,8 +167,10 @@ public class main {
     Map<String, LinkedList<Interface>> mapPrefixToUsedInterfaces = new HashMap<String, LinkedList<Interface>>();
     List<Dependency> dsfddsfdsf = null;
 
-    // 3. Step: Führe auf jedes Repository ein SVN-Checkout aus
-
+    /*
+     * 3. Hat man die Repository Links aus der Exceltabelle extrahiert, kann auf diese in einem LinkedList zugegriffen
+     * werden. In diesem Schritt iteriert man über alle SVN Repositories und führt ein SVN Checkout durch.
+     */
     boolean useRepositoryNames = inputColumnNumberRepositoryNamesValue >= 0;
 
     for (int i = inputRowNumberValue; i < columnExcelRepositoryLinks.size(); i++) {
@@ -166,10 +178,23 @@ public class main {
 
       String url = columnExcelRepositoryLinks.get(i);
 
-      // String url =
-      // "https://svn.win.tue.nl/repos/prom/Packages/GuideTreeMiner/Trunk";
       if (url.charAt(url.length() - 1) != '/') {
         url = url + '/';
+      }
+
+      /*
+       * Prüfe, ob die URL zu einer Datei verweist
+       */
+
+      boolean urlContainsSlash = url.contains("/");
+
+      String[] dasds = null;
+      String sadsa = null;
+
+      if (urlContainsSlash) {
+
+        dasds = url.split("/");
+        sadsa = dasds[dasds.length - 1];
       }
 
       SVNClientManager ourClientManager = SVNClientManager.newInstance();
@@ -177,6 +202,11 @@ public class main {
       updateClient.setIgnoreExternals(false);
 
       File f = null;
+
+      /*
+       * Wenn der Nutzer im Property File eine Spalte kleiner als 0 festgelegt hat, werden Ordner Zahlen als Namen in
+       * aufsteigender Reihenfolge vergeben.
+       */
       if (useRepositoryNames) {
         String repositoryName = columnExcelRepositoryNames.get(i);
         f = new File(svnTempPath + "/" + repositoryName);
@@ -202,15 +232,29 @@ public class main {
 
       System.out.println("SVN Checkout: " + svnUrl);
 
-      try {
+      /*
+       * Beim Ausschecken beschränkt man sich lediglich auf alle Dateien, Ordner und Unterordner. Insbesondere werden
+       * Dateien und Ordner ab einer Rekursionstiefe von 2 nicht berücksichtigt.
+       */
 
+      try {
         updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
       } catch (SVNException e) {
-        e.printStackTrace();
-        LOG.error("SVN Checkout error");
-      }
 
-      // Ordner checkouten
+        String errorMessage = e.getMessage();
+        boolean noFolderRepository = errorMessage.contains("E200007");
+
+        if (noFolderRepository) {
+          LOG.error("SVN Checkout error: Repository: " + url
+              + " wird ignoriert. Nur Repositories mit einem Ordner werden berücksichtigt.");
+
+        } else {
+          e.printStackTrace();
+          LOG.error("SVN Checkout error: " + e.getMessage());
+        }
+        continue;
+
+      }
 
       String[] subFolders = null;
       subFolders = f.list(new FilenameFilter() {
@@ -226,6 +270,11 @@ public class main {
       for (int j = 0; j < subFolders.length; j++) {
         subFoldersDynamicList.add(subFolders[j]);
       }
+
+      /*
+       * Ordner, die mit einem . beginnen, werden ignoriert. Dabei handelt es sich um den .svn Ordner, der sich im
+       * Hauptverzeichnis befindet.
+       */
 
       for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
         String string = (String) iterator.next();
@@ -260,11 +309,12 @@ public class main {
         }
       }
 
-      // 4. Step: Ableitung von POM-Modellen aus POM.xml's in den Repositories
-      //
-      // -> 4.1 POM Modell des Parent POM.xml
-      // -> 4.1 POM Modell der Hauptanwendung POM.xml
     }
+
+    /*
+     * 4. Hat man alle SVN Repositories ausgecheckt, beginnt die nächste große for-Schleife, bei der wir über alle
+     * SVN-Checkouts iterieren und in jedem Repository das Parent POM-File und das POM File der Hauptanwendung parsen.
+     */
 
     String[] subFolders = null;
     File file = new File(svnTempPath);
@@ -283,6 +333,11 @@ public class main {
 
       ParsePOM parsePOMinstance = null;
 
+      /*
+       * Nur Repositories, die eine POM.xml File enthalten werden berücksichtigt. Falls POM.xml nicht vorhanden, mache
+       * mit dem nächsten Schleifendurchlauf weiter.
+       */
+
       try {
         parsePOMinstance = new ParsePOM(folderName + "/pom.xml", regEx);
       } catch (IOException e1) {
@@ -291,7 +346,7 @@ public class main {
         LOG.debug(e1.getMessage());
 
       } catch (NullPointerException e1) {
-        LOG.debug(e1.getMessage());
+        LOG.debug("Repository '" + folderName + "' hat keine POM Struktur und wird nicht berücksichtigt: " + e1);
         continue;
       }
 
@@ -306,8 +361,15 @@ public class main {
       String[] stockArr = new String[modules.size()];
       stockArr = modules.toArray(stockArr);
 
-      // Identifizierung der Hauptanwendung durch Bestimmung der größten gemeinsamen
-      // Präfix
+      /*
+       * In einem der Ordner im Hauptverzeichnis befindet sich die Hauptanwendung. Alle Schnittstellen der
+       * Hauptanwendung sind durch Namen der Hauptanwenung als Präfix gekennzeichnet. Darüberhinaus kann es Ordner
+       * geben, die die Hauptanwendung nicht als Präfix haben, wobei diese selten vorkommen und es sich um Ausnahmefälle
+       * handelt. Zur Identifizierung der Hauptanwendung werden unter den Ordnern alle möglichen ungleiche Paare
+       * gebildet. Im nächsten Schritt iteriert man über alle Paare. Für jedes Paar wird das größtmögliche gemeinsame
+       * Präfix bestimmt. Für alle bestimmten Präfixe wird Buch darüber geführt, wie oft es vorgekommen ist. Das Präfix,
+       * welches am häufigsten v vorgekommen ist, entspricht dem Ordernamen der Hauptanwendung.
+       */
 
       HashMap<String, Integer> countPrefix = new HashMap<>();
       for (int j = 0; j < stockArr.length; j++) {
@@ -373,17 +435,16 @@ public class main {
       mapPrefixToOfferedInterfaces.put(nameMainApplication, (LinkedList<Interface>) offeredInterfacesMainApplication);
       mapPrefixToUsedInterfaces.put(nameMainApplication, (LinkedList<Interface>) usedInterfacesMainApplication);
 
-      // String pathMainApplication =
-      // "C:\\Users\\vhacimuf\\Desktop\\TWS-4\\Vorlage-Geschaeftsanwendung_bza_1.4.0_01";
       Node node = new Node();
       node.setName(nameMainApplication);
       node.setUsedInterfaces(usedInterfacesMainApplication);
       node.setOfferedInterfaces(offeredInterfacesMainApplication);
-      nodesList.add(node);
+      nodes.add(node);
     }
 
-    // Leere svn Ordner mit Checkouts
-
+    /*
+     * Der temporäre SVN Ordner ist nach dem Parsevorgang überflüssig und kann optional gelöscht werden.
+     */
     if (svnTempPathDeleteValue) {
       try {
         deleteDirectoryRecursion(new File(svnTempPath));
@@ -393,20 +454,24 @@ public class main {
     }
 
     File theDir = new File(svnTempPath);
-    // if the directory does not exist, create it
 
-    // Lösche alte NEO4J Datenbank.
+    /*
+     * Bevor eine neue NEO4J Datenbank erstellt werden kann, muss die alte gelöscht werden.
+     */
+
     try {
       deleteDirectoryRecursion(new File(neo4J));
     } catch (IOException e) {
       LOG.debug(e.getMessage());
     }
 
-    // 5. Step: Erstelle Neo4J Datenbank und bilde das Model auf einen NEO4J Graphen
-    // ab.
-    Neo4J db = new Neo4J(neo4J);
+    /*
+     * 5. In diesem Schritt wird eine neue NEO4 Datenbank erstellt und die zuvor abgeleiteten Relationen zwischen
+     * Anwendungen und Schnittstellen in die Graphendatenbank gespeichert.
+     */
+    Neo4j db = new Neo4j(neo4J);
 
-    for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
+    for (Iterator iterator = nodes.iterator(); iterator.hasNext();) {
       Node node1 = (Node) iterator.next();
 
       String name = node1.getName();
@@ -416,7 +481,7 @@ public class main {
       properties.put("pid", name);
       properties.put("name", name);
 
-      db.addNode(NodeType.Application, properties, name);
+      db.addNode(NodeType.APPLICATION, properties, name);
 
       List<Interface> offered = node1.getOfferedInterfaces();
 
@@ -429,40 +494,17 @@ public class main {
         propertiesInterface.put("pid", Pid);
         propertiesInterface.put("name", InterfaceName);
         propertiesInterface.put("businessVersion", dependency.getVersion());
-        // get technical version
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
 
-        db.addNode(NodeType.Interface, propertiesInterface);
+        db.addNode(NodeType.INTERFACE, propertiesInterface);
 
         Map<String, String> propertiesRelation = new HashMap<String, String>();
-
-        // properties.put("pid", "1");
-        db.addRelation(name, NodeType.Application, Pid, NodeType.Interface, propertiesRelation, RelationType.offers);
+        db.addRelation(name, NodeType.APPLICATION, Pid, NodeType.INTERFACE, propertiesRelation, RelationType.OFFERS);
       }
-
-      List<Interface> used = node1.getUsedInterfaces();
-      for (Iterator iterator2 = used.iterator(); iterator2.hasNext();) {
-        Interface dependency = (Interface) iterator2.next();
-
-        Map<String, String> propertiesInterface = new HashMap<String, String>();
-
-        String InterfaceName = dependency.getName();
-        String Pid = dependency.getId();
-        propertiesInterface.put("pid", Pid);
-        propertiesInterface.put("name", InterfaceName);
-        propertiesInterface.put("businessVersion", dependency.getVersion());
-        String technical = dependency.getTechnicalVersion();
-        propertiesInterface.put("technicalVersion", technical);
-
-        // Fallunterscheidug
-        Map<String, String> propertiesRelation = new HashMap<String, String>();
-
-      }
-
     }
 
-    for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) {
+    for (Iterator iterator = nodes.iterator(); iterator.hasNext();) {
       Node node1 = (Node) iterator.next();
 
       String applicationName = node1.getName();
@@ -476,7 +518,7 @@ public class main {
 
         // Gibt es einen Knoten der das anbietet?
         // Prüfe ob es einen Knoten existiert, der usedInterface anbietet
-        String checkNode = Nodes.getKey(mapPrefixToOfferedInterfaces, usedInterface);
+        String checkNode = ModelUtils.getKey(mapPrefixToOfferedInterfaces, usedInterface);
 
         if (checkNode == null) {
 
@@ -490,98 +532,35 @@ public class main {
           propertiesInterface.put("technicalVersion", technical);
 
           if (!db.findNode(pId)) {
-            db.addNode(NodeType.Interface, propertiesInterface);
+            db.addNode(NodeType.INTERFACE, propertiesInterface);
           }
 
-          db.addRelation(applicationName, NodeType.Application, usedInterface.getId(), NodeType.Interface,
-              propertiesRelation, RelationType.uses);
+          db.addRelation(applicationName, NodeType.APPLICATION, usedInterface.getId(), NodeType.INTERFACE,
+              propertiesRelation, RelationType.USES);
           // TODO: Relation used but not offered! Solved 04.02.2018
 
         } else {
-          db.addRelation(applicationName, NodeType.Application, usedInterface.getId(), NodeType.Interface,
-              propertiesRelation, RelationType.uses);
+          db.addRelation(applicationName, NodeType.APPLICATION, usedInterface.getId(), NodeType.INTERFACE,
+              propertiesRelation, RelationType.USES);
 
         }
       }
     }
 
-    // nach nicht technischem Update wird version zurückgesetzt
     /*
-     * // 6. Relationen herstellen for (Iterator iterator = nodesList.iterator(); iterator.hasNext();) { Node node =
-     * (Node) iterator.next();
-     *
-     * String name = node.getName(); List<Interface> usedInterfaces = node.getUsedInterfaces(); for (Iterator iterator2
-     * = usedInterfaces.iterator(); iterator2.hasNext();) { Interface interface1 = (Interface) iterator2.next();
-     *
-     * String interface1Name = interface1.getName(); String interface1Version = interface1.getVersion(); String
-     * interface1Id = interface1.getId(); // Set<String> set = mapPrefixToOfferedInterfaces.keySet();
-     *
-     * String asds = getKey(mapPrefixToOfferedInterfaces, interface1);
-     *
-     * Node foundNode = nodes.findNode(asds); if (foundNode != null) { List<Interface> foundNodeOfferedInterfaces =
-     * foundNode.getOfferedInterfaces();
-     *
-     * HashMap<String, List<Interface>> groupedByInterfaces = new HashMap<String, List<Interface>>();
-     *
-     * // Gruppiere alle Interfaces mit gleichem Namen aber unterschiedlicher Version in ein Cluster (Group by) for
-     * (Iterator iterator4 = foundNodeOfferedInterfaces.iterator(); iterator4.hasNext();) { Interface interface4 =
-     * (Interface) iterator4.next(); String interfaceName = interface4.getName();
-     *
-     * if (!groupedByInterfaces.containsKey(interfaceName)) { List<Interface> list = new ArrayList<Interface>();
-     * list.add(interface4);
-     *
-     * groupedByInterfaces.put(interfaceName, list); } else { groupedByInterfaces.get(interfaceName).add(interface4); }
-     * }
-     *
-     * Comparator<Interface> cmp = new Comparator<Interface>() {
-     *
-     * @Override public int compare(Interface o1, Interface o2) {
-     *
-     * return Double.valueOf(o1.getVersion()).compareTo(Double.valueOf(o2.getVersion())); } };
-     *
-     * Set<String> asdsadsads = groupedByInterfaces.keySet();
-     *
-     * for (Iterator iterator3 = asdsadsads.iterator(); iterator3.hasNext();) { String interface2 = (String)
-     * iterator3.next(); List<Interface> asdasdasd = groupedByInterfaces.get(interface2);
-     *
-     * Interface asdsad = Collections.max(asdasdasd, cmp); double maxVersion = asdsad.getVersionDouble();
-     *
-     * String interface2Name = asdsad.getName(); String interface2Version = asdsad.getVersion(); String interface2Id =
-     * asdsad.getId();
-     *
-     * List<Interface> asdsadsadasds = asdasdasd;
-     *
-     * for (Iterator iterator4 = asdsadsadasds.iterator(); iterator4.hasNext();) { Interface interface3 = (Interface)
-     * iterator4.next();
-     *
-     * if (interface1Name.equals(interface3.getName()) && interface1Version.equals(interface3.getVersion())) {
-     * Map<String, String> propertiesRelation = new HashMap<String, String>();
-     *
-     * // Falls eine veraltete Schnittstelle genutzt wird, verwende Oldversion als Relationslabel(zur visuellen //
-     * Unterscheidung) if (Double.valueOf(interface1Version) < maxVersion) {
-     *
-     * db.addRelation(interface1Id, NodeType.UsedInterface, interface3.getId(), NodeType.OfferedInterface,
-     * propertiesRelation, RelationType.Oldversion); } else {
-     *
-     * db.addRelation(interface1Id, NodeType.UsedInterface, interface3.getId(), NodeType.OfferedInterface,
-     * propertiesRelation, RelationType.Connection);
-     *
-     * } }
-     *
-     * }
-     *
-     * } }
-     *
-     * } }
-     *
-     *
+     * Die Verbindung mit der Datenbank wird beendet.
      */
-    // Beende die Verbindung mit der Datenbank
     db.shutdown();
 
-    // Prüfe, ob Neo4J Server gestartet werden soll.
+    /*
+     * Nachdem die Graphendatenbank erstellt wurde, kann der NEO4 Server gestartet werden.
+     */
+
     if (startNeo4JServerValue) {
-      // Erstelle BAT File
+
+      /*
+       * Generiere run.bat zur automatisierten Ausführung.
+       */
       final File batFile = new File("run.bat");
       try {
         batFile.createNewFile();
@@ -615,7 +594,7 @@ public class main {
   }
 
   /**
-   * @param theDir
+   * Erstellt einen neuen Ordner im übergebenen Pfad, falls diseser nicht existiert.
    */
   private static void createFolderIfNotExist(String path) {
 
@@ -629,13 +608,17 @@ public class main {
         theDir.mkdir();
         result = true;
       } catch (SecurityException se) {
-        // handle it
+        se.printStackTrace();
       }
       if (result) {
         // System.out.println("DIR created");
       }
     }
   }
+
+  /**
+   * Löscht rekursiv alle Ordner und Unterordner im übergebenen Pfad
+   */
 
   public static void deleteDirectoryRecursion(File file) throws IOException {
 

@@ -1,8 +1,8 @@
-package updatedinterfacesvis.model;
+package sst.model;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
 public class Interface {
 

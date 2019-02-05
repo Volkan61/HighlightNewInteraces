@@ -1,10 +1,10 @@
-package updatedinterfacesvis.model;
+package sst.model;
 
 import java.util.List;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
 public class Node {
 

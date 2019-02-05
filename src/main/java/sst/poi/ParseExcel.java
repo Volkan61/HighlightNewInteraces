@@ -1,4 +1,4 @@
-package updatedinterfacesvis.poi;
+package sst.poi;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,14 +11,14 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
- * @author vhacimuf
- *
+ * @author CapGemini, Volkan Hacimüftüoglu
+ * @version 05.02.2018
  */
-public class Utils {
+public class ParseExcel {
 
-  private static List<String> getColumn(String path, int columnIndex) {
+  public static List<String> parse(int pSheet, String path, int columnIndex) {
 
-    LinkedList<String> output = new LinkedList<>();
+    LinkedList<String> output = new LinkedList<String>();
 
     try {
       FileInputStream file = new FileInputStream(new File(path));
@@ -27,15 +27,16 @@ public class Utils {
       XSSFWorkbook workbook = new XSSFWorkbook(file);
 
       // Get first/desired sheet from the workbook
-      XSSFSheet sheet = workbook.getSheetAt(1);
+      XSSFSheet sheet = workbook.getSheetAt(pSheet);
 
       for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
         Row row = sheet.getRow(rowIndex);
         if (row != null) {
-          Cell cell = row.getCell(8);
+          Cell cell = row.getCell(columnIndex);
           if (cell != null) {
             // Found column and there is value in the cell.
             String cellValueMaybeNull = cell.getStringCellValue();
+
             output.add(cellValueMaybeNull);
             // Do something with the cellValueMaybeNull here ...
           }
