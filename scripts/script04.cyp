@@ -1,3 +1,1 @@
-MATCH (app:APPLICATION)--(:INTERFACE)
-WHERE app.name='passagierakte-ga'
-RETURN (app:APPLICATION)--(:INTERFACE)
+match (n {name:kontrollakte-ga}) -[:OFFERS]-> (m) return n,m 

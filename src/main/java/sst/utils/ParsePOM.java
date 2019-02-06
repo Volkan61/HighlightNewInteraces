@@ -154,7 +154,8 @@ public class ParsePOM {
         versionDobule = Double.parseDouble(version);
       }
 
-      Interface interfaceInstance = new Interface(Id, name, version, versionDobule, technicalVersion);
+      Interface interfaceInstance = new Interface(Id + "-" + technicalVersion, name, version, versionDobule,
+          technicalVersion);
       this.offeredInterfaces.add(interfaceInstance);
     }
 
@@ -164,7 +165,7 @@ public class ParsePOM {
       String Id = dependency.getArtifactId();
       int index = Id.lastIndexOf('-');
 
-      char sadasd = Id.charAt(index + 1);
+      char nextToIndex = Id.charAt(index + 1);
 
       String technicalVersion = null;
 
@@ -180,13 +181,14 @@ public class ParsePOM {
       String version = "0";
       String name = Id;
 
-      if (sadasd == 'v') {
+      if (nextToIndex == 'v') {
         name = Id.substring(0, index);
         version = Id.substring(index + 2, Id.length());
         versionDobule = Double.parseDouble(version);
       }
 
-      Interface interfaceInstance = new Interface(Id, name, version, versionDobule, technicalVersion);
+      Interface interfaceInstance = new Interface(Id + "-" + technicalVersion, name, version, versionDobule,
+          technicalVersion);
       this.usedInterfaces.add(interfaceInstance);
     }
   }

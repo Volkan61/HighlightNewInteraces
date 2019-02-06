@@ -34,8 +34,8 @@ import org.tmatesoft.svn.core.wc.SVNRevision;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 
 import sst.model.Interface;
-import sst.model.Node;
 import sst.model.ModelUtils;
+import sst.model.Node;
 import sst.neo4j.Neo4j;
 import sst.neo4j.Neo4j.NodeType;
 import sst.neo4j.Neo4j.RelationType;
