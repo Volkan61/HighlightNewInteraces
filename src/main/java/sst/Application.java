@@ -14,11 +14,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.apache.maven.model.Dependency;
-import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.tmatesoft.svn.core.SVNDepth;
@@ -39,8 +39,8 @@ import sst.neo4j.Neo4j.RelationType;
 import sst.poi.ParseExcel;
 import sst.svn.config.Konfiguration;
 import sst.svn.utils.SvnHelperNeu;
-import sst.utils.CommonUtils;
 import sst.utils.ParsePOM;
+import sst.utils.Util;
 
 public class Application {
 
@@ -96,6 +96,8 @@ public class Application {
 
   private String regEx;
 
+  private String ignoreFolderRegEx;
+
   List<String> columnExcelRepositoryLinks;
 
   List<String> columnExcelRepositoryNames;
@@ -106,6 +108,18 @@ public class Application {
 
   LinkedList<Node> nodes;
 
+  SVNClientManager ourClientManager;
+
+  SVNUpdateClient updateClient;
+
+  List<String> pathToPomFiles;
+
+  String depth;
+
+  String conditions;
+
+  LinkedList<LinkedList<String>> conditionsList;
+
   public Application() {
 
     accessApplicationProperties();
@@ -113,6 +127,10 @@ public class Application {
     createFolderIfNotExist(this.svnTempPath);
 
     parseExcel();
+
+    this.ourClientManager = SVNClientManager.newInstance();
+    this.updateClient = this.ourClientManager.getUpdateClient();
+    this.updateClient.setIgnoreExternals(false);
 
     executeSVNCheckouts();
 
@@ -199,7 +217,11 @@ public class Application {
         String technical = dependency.getTechnicalVersion();
         propertiesInterface.put("technicalVersion", technical);
 
-        db.addNode(NodeType.INTERFACE, propertiesInterface);
+        // db.addNode(NodeType.INTERFACE, propertiesInterface);
+
+        if (!db.findNode(Pid)) {
+          db.addNode(NodeType.INTERFACE, propertiesInterface);
+        }
 
         Map<String, String> propertiesRelation = new HashMap<String, String>();
         db.addRelation(name, NodeType.APPLICATION, Pid, NodeType.INTERFACE, propertiesRelation, RelationType.OFFERS);
@@ -281,7 +303,30 @@ public class Application {
     this.nodes = new LinkedList<>();
 
     for (int i = 0; i < sizeFolders; i++) {
-      String folderName = this.svnTempPath + "/" + subFolders[i];
+      String folderName = this.svnTempPath + "/" + subFolders[i] + "/";
+
+      // test
+
+      this.pathToPomFiles = new LinkedList<>();
+      traverseChcekouts(folderName);
+      String parentPomFilePath = getParentPom(this.pathToPomFiles);
+
+      LinkedList<String> pathToPomFilesWithoutParentPom = new LinkedList<>();
+
+      for (Iterator iterator = this.pathToPomFiles.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+        if (!string.equals(parentPomFilePath)) {
+          pathToPomFilesWithoutParentPom.add(string);
+        }
+      }
+
+      List<String> pathToPomFiles = null;
+      try {
+        pathToPomFiles = getApplicationPoms(pathToPomFilesWithoutParentPom);
+      } catch (IOException | XmlPullParserException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
 
       ParsePOM parsePOMinstance = null;
 
@@ -291,15 +336,11 @@ public class Application {
        */
 
       try {
-        parsePOMinstance = new ParsePOM(folderName + "/pom.xml", this.regEx);
+        parsePOMinstance = new ParsePOM(parentPomFilePath, this.regEx);
       } catch (IOException e1) {
         LOG.debug(e1.getMessage());
       } catch (XmlPullParserException e1) {
         LOG.debug(e1.getMessage());
-
-      } catch (NullPointerException e1) {
-        LOG.debug("Repository '" + folderName + "' hat keine POM Struktur und wird nicht berücksichtigt: " + e1);
-        continue;
       }
 
       parsePOMinstance.extractInformationFromPOMModel();
@@ -307,8 +348,8 @@ public class Application {
 
       Model parentModuleModel = parsePOMinstance.getPomModel();
 
-      DependencyManagement dependencyManagment = parsePOMinstance.getPomModel().getDependencyManagement();
-      dependencies = dependencyManagment.getDependencies();
+      // DependencyManagement dependencyManagment = parsePOMinstance.getPomModel().getDependencyManagement();
+      // dependencies = dependencyManagment.getDependencies();
 
       String[] stockArr = new String[modules.size()];
       stockArr = modules.toArray(stockArr);
@@ -323,76 +364,86 @@ public class Application {
        * welches am häufigsten v vorgekommen ist, entspricht dem Ordernamen der Hauptanwendung.
        */
 
-      HashMap<String, Integer> countPrefix = new HashMap<>();
-      for (int j = 0; j < stockArr.length; j++) {
-        String a = stockArr[j];
-        for (int j2 = 0; j2 < stockArr.length; j2++) {
-          if (j != j2) {
-            String b = stockArr[j2];
+      // HashMap<String, Integer> countPrefix = new HashMap<>();
+      // for (int j = 0; j < stockArr.length; j++) {
+      // String a = stockArr[j];
+      // for (int j2 = 0; j2 < stockArr.length; j2++) {
+      // if (j != j2) {
+      // String b = stockArr[j2];
+      //
+      // String[] stringArray = new String[2];
+      // stringArray[0] = a;
+      // stringArray[1] = b;
+      //
+      // String longestCmmPrefix = CommonUtils.longestCommonPrefix(stringArray);
+      //
+      // Integer sads = countPrefix.get(longestCmmPrefix);
+      //
+      // if (sads == null) {
+      // countPrefix.put(longestCmmPrefix, 1);
+      // } else {
+      // countPrefix.put(longestCmmPrefix, sads + 1);
+      //
+      // }
+      // }
+      // }
+      // }
+      //
+      // Set<String> countPrefixKeySet = countPrefix.keySet();
+      // int countMax = 0;
+      // String countMaxKey = "";
+      //
+      // for (Iterator iterator = countPrefixKeySet.iterator(); iterator.hasNext();) {
+      // String string = (String) iterator.next();
+      //
+      // Integer count = countPrefix.get(string);
+      // if (count > countMax) {
+      // countMax = count;
+      // countMaxKey = string;
+      // }
+      // }
+      //
+      // if (countMaxKey.charAt(countMaxKey.length() - 1) == '-') {
+      // countMaxKey = (String) countMaxKey.subSequence(0, countMaxKey.length() - 1);
+      // }
 
-            String[] stringArray = new String[2];
-            stringArray[0] = a;
-            stringArray[1] = b;
+      // String nameMainApplication = countMaxKey;
 
-            String longestCmmPrefix = CommonUtils.longestCommonPrefix(stringArray);
+      // String pathToMainApplicationPom = folderName + "/" + nameMainApplication + "/pom.xml";
 
-            Integer sads = countPrefix.get(longestCmmPrefix);
+      /*
+       * Fallunterscheidung POMs die httpinvoker haben und nicht
+       */
 
-            if (sads == null) {
-              countPrefix.put(longestCmmPrefix, 1);
-            } else {
-              countPrefix.put(longestCmmPrefix, sads + 1);
-
-            }
-          }
-        }
-      }
-
-      Set<String> countPrefixKeySet = countPrefix.keySet();
-      int countMax = 0;
-      String countMaxKey = "";
-
-      for (Iterator iterator = countPrefixKeySet.iterator(); iterator.hasNext();) {
+      for (Iterator iterator = pathToPomFiles.iterator(); iterator.hasNext();) {
         String string = (String) iterator.next();
 
-        Integer count = countPrefix.get(string);
-        if (count > countMax) {
-          countMax = count;
-          countMaxKey = string;
+        ParsePOM parsePOMMainApplication = null;
+        try {
+          parsePOMMainApplication = new ParsePOM(string, this.regEx);
+        } catch (IOException | XmlPullParserException e) {
+
+          LOG.debug(e.getMessage());
+
         }
+
+        parsePOMMainApplication.extractInformationFromPOMModel(parentModuleModel);
+
+        String applicationName = parsePOMMainApplication.getPomModel().getArtifactId();
+        List<Interface> offeredInterfacesMainApplication = parsePOMMainApplication.getOfferedInterfaces();
+        List<Interface> usedInterfacesMainApplication = parsePOMMainApplication.getUsedInterfaces();
+
+        this.mapPrefixToOfferedInterfaces.put(applicationName,
+            (LinkedList<Interface>) offeredInterfacesMainApplication);
+        this.mapPrefixToUsedInterfaces.put(applicationName, (LinkedList<Interface>) usedInterfacesMainApplication);
+
+        Node node = new Node();
+        node.setName(applicationName);
+        node.setUsedInterfaces(usedInterfacesMainApplication);
+        node.setOfferedInterfaces(offeredInterfacesMainApplication);
+        this.nodes.add(node);
       }
 
-      if (countMaxKey.charAt(countMaxKey.length() - 1) == '-') {
-        countMaxKey = (String) countMaxKey.subSequence(0, countMaxKey.length() - 1);
-      }
-
-      String nameMainApplication = countMaxKey;
-
-      String pathToMainApplicationPom = folderName + "/" + nameMainApplication + "/pom.xml";
-
-      ParsePOM parsePOMMainApplication = null;
-      try {
-        parsePOMMainApplication = new ParsePOM(pathToMainApplicationPom, this.regEx);
-      } catch (IOException | XmlPullParserException e) {
-
-        LOG.debug(e.getMessage());
-
-      }
-
-      parsePOMMainApplication.extractInformationFromPOMModel(parentModuleModel);
-
-      List<Interface> offeredInterfacesMainApplication = parsePOMMainApplication.getOfferedInterfaces();
-      List<Interface> usedInterfacesMainApplication = parsePOMMainApplication.getUsedInterfaces();
-
-      this.mapPrefixToOfferedInterfaces.put(nameMainApplication,
-          (LinkedList<Interface>) offeredInterfacesMainApplication);
-      this.mapPrefixToUsedInterfaces.put(nameMainApplication, (LinkedList<Interface>) usedInterfacesMainApplication);
-
-      Node node = new Node();
-      node.setName(nameMainApplication);
-      node.setUsedInterfaces(usedInterfacesMainApplication);
-      node.setOfferedInterfaces(offeredInterfacesMainApplication);
-      this.nodes.add(node);
     }
 
     /*
@@ -451,11 +502,7 @@ public class Application {
         sadsa = splittedURL[splittedURL.length - 1];
       }
 
-      SVNClientManager ourClientManager = SVNClientManager.newInstance();
-      SVNUpdateClient updateClient = ourClientManager.getUpdateClient();
-      updateClient.setIgnoreExternals(false);
-
-      File f = null;
+      String f = null;
 
       /*
        * Wenn der Nutzer im Property File eine Spalte kleiner als 0 festgelegt hat, werden Ordner Zahlen als Namen in
@@ -463,105 +510,23 @@ public class Application {
        */
       if (useRepositoryNames) {
         String repositoryName = this.columnExcelRepositoryNames.get(i);
-        f = new File(this.svnTempPath + "/" + repositoryName);
+        f = this.svnTempPath + "/" + repositoryName;
       } else {
-        f = new File(this.svnTempPath + "/" + i);
+        f = this.svnTempPath + "/" + i;
       }
 
-      SVNRepository repository = null;
-      SVNURL svnUrl = null;
-
-      try {
-        svnUrl = SVNURL.parseURIEncoded(url);
-      } catch (SVNException e1) {
-        LOG.debug(e1.getMessage());
-      }
-
-      try {
-        repository = SVNRepositoryFactory.create(svnUrl);
-      } catch (SVNException e) {
-        LOG.debug(e.getMessage());
-
-      }
-
-      System.out.println("SVN Checkout: " + svnUrl);
+      checkoutRecursive(url, f, 0);
+      System.out.println("SVN Checkout: " + url);
 
       /*
        * Beim Ausschecken beschränkt man sich lediglich auf alle Dateien, Ordner und Unterordner. Insbesondere werden
        * Dateien und Ordner ab einer Rekursionstiefe von 2 nicht berücksichtigt.
        */
 
-      try {
-        updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
-      } catch (SVNException e) {
-
-        String errorMessage = e.getMessage();
-        boolean noFolderRepository = errorMessage.contains("E200007");
-
-        if (noFolderRepository) {
-          LOG.error("SVN Checkout error: Repository: " + url
-              + " wird ignoriert. Nur Repositories mit einem Ordner werden berücksichtigt.");
-
-        } else {
-          e.printStackTrace();
-          LOG.error("SVN Checkout error: " + e.getMessage());
-        }
-        continue;
-
-      }
-
-      String[] subFolders = null;
-      subFolders = f.list(new FilenameFilter() {
-        @Override
-        public boolean accept(File current, String name) {
-
-          return new File(current, name).isDirectory();
-        }
-      });
-
-      LinkedList<String> subFoldersDynamicList = new LinkedList<>();
-
-      for (int j = 0; j < subFolders.length; j++) {
-        subFoldersDynamicList.add(subFolders[j]);
-      }
-
       /*
        * Ordner, die mit einem . beginnen, werden ignoriert. Dabei handelt es sich um den .svn Ordner, der sich im
        * Hauptverzeichnis befindet.
        */
-
-      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
-        String string = (String) iterator.next();
-
-        boolean isPoint = string.charAt(0) == '.';
-
-        if (isPoint)
-          iterator.remove();
-
-      }
-
-      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
-        String string = (String) iterator.next();
-
-        try {
-          svnUrl = SVNURL.parseURIEncoded(url + string);
-        } catch (SVNException e1) {
-          LOG.debug(e1.getMessage());
-        }
-        try {
-          repository = SVNRepositoryFactory.create(svnUrl);
-        } catch (SVNException e) {
-          LOG.debug(e.getMessage());
-        }
-        try {
-
-          File g = new File(f.getPath() + "/" + string);
-          updateClient.doCheckout(svnUrl, g, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
-        } catch (SVNException e) {
-          e.printStackTrace();
-          LOG.error("SVN Checkout error");
-        }
-      }
 
     }
   }
@@ -663,6 +628,320 @@ public class Application {
     this.startNeo4JServer = applicationProperties.getProperty("startNeo4JServer");
     this.startNeo4JServerValue = Boolean.parseBoolean(this.startNeo4JServer);
     this.regEx = applicationProperties.getProperty("regEx");
+    this.ignoreFolderRegEx = applicationProperties.getProperty("ignoreFolderRegEx");
+    this.depth = applicationProperties.getProperty("depth");
+    this.conditions = applicationProperties.getProperty("conditions");
+
+    String[] asdsa = this.conditions.split("\\|");
+
+    LinkedList<LinkedList<String>> conditionsDynamicList = new LinkedList<LinkedList<String>>();
+
+    for (int i = 0; i < asdsa.length; i++) {
+      String sdf = asdsa[i];
+      String[] asdsad = sdf.split("&");
+
+      LinkedList<String> andConditions = new LinkedList<>();
+      for (int j = 0; j < asdsad.length; j++) {
+        andConditions.add(asdsad[j].replace("(", "").replace(")", ""));
+      }
+
+      conditionsDynamicList.add(andConditions);
+
+    }
+
+    this.conditionsList = conditionsDynamicList;
+
+  }
+
+  public List<String> getApplicationPoms(List<String> pathToPomFiles) throws IOException, XmlPullParserException {
+
+    LinkedList<String> output = new LinkedList<>();
+
+    for (Iterator iterator = pathToPomFiles.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+
+      File f = new File(string);
+      Model model = Util.getModelFromPOM(f);
+      String artifactId = model.getArtifactId();
+
+      Pattern p = Pattern.compile(this.regEx.toLowerCase());
+      Matcher m = p.matcher(artifactId);
+      boolean foundString = m.find();
+
+      Pattern p2 = Pattern.compile(this.ignoreFolderRegEx);
+      Matcher m2 = p2.matcher(artifactId);
+      boolean ignoreApplication = m2.find();
+
+      if (!foundString && !ignoreApplication) {
+        output.add(string);
+      }
+
+    }
+    return output;
+  }
+
+  public String getParentPom(List<String> pathToPomFiles) {
+
+    for (Iterator iterator = pathToPomFiles.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+      ParsePOM parsePOMinstance = null;
+      try {
+        parsePOMinstance = new ParsePOM(string, this.regEx);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (XmlPullParserException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+
+      parsePOMinstance.extractInformationFromPOMModel();
+      List<String> modules = parsePOMinstance.getPomModel().getModules();
+      List<String> modules2 = parsePOMinstance.getPomModel().getModules();
+
+      if (!modules.isEmpty())
+        return string;
+    }
+    return null;
+  }
+
+  private void traverseChcekouts(String pathToProject) {
+
+    File f = new File(pathToProject);
+
+    String[] subFolders = null;
+    File file = new File(pathToProject);
+    subFolders = file.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File current, String name) {
+
+        return new File(current, name).isDirectory();
+      }
+    });
+    int sizeFolders = subFolders.length;
+
+    String[] subFiles = null;
+    subFiles = file.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File current, String name) {
+
+        return new File(current, name).exists();
+      }
+    });
+    int sizeFiles = subFiles.length;
+
+    LinkedList<String> subFoldersDynamicList = new LinkedList<>();
+    LinkedList<String> subFilesDynamicList = new LinkedList<>();
+
+    for (int j = 0; j < subFolders.length; j++) {
+      subFoldersDynamicList.add(subFolders[j]);
+    }
+
+    for (int j = 0; j < subFiles.length; j++) {
+      subFilesDynamicList.add(subFiles[j]);
+    }
+
+    /*
+     * Ordner, die mit einem . beginnen, werden ignoriert. Dabei handelt es sich um den .svn Ordner, der sich im
+     * Hauptverzeichnis befindet.
+     */
+
+    for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+
+      boolean isPoint = string.charAt(0) == '.';
+
+      if (isPoint)
+        iterator.remove();
+    }
+
+    for (Iterator iterator2 = subFilesDynamicList.iterator(); iterator2.hasNext();) {
+      String string = (String) iterator2.next();
+
+      boolean isPoint = string.charAt(0) == '.';
+
+      if (isPoint)
+        iterator2.remove();
+    }
+
+    for (Iterator iterator = subFilesDynamicList.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+
+      boolean equalsPOMFile = string.equals("pom.xml");
+
+      if (equalsPOMFile) {
+        this.pathToPomFiles.add(pathToProject + "pom.xml");
+      }
+    }
+
+    boolean empty = subFoldersDynamicList.isEmpty();
+    // gehe rekursiv die Ordner nicht durch falls die Bedinungen im ordner nicht erfüllt
+
+    if (empty) {
+      return;
+    }
+
+    else
+
+    {
+      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+
+        String newPath = pathToProject + string + "/";
+        traverseChcekouts(newPath);
+      }
+    }
+
+  }
+
+  private void checkoutRecursive(String svnPath, String path, int accumulator) {
+
+    File f = new File(path);
+    SVNRepository repository = null;
+    SVNURL svnUrl = null;
+
+    try {
+      svnUrl = SVNURL.parseURIEncoded(svnPath);
+    } catch (SVNException e1) {
+      LOG.debug(e1.getMessage());
+    }
+
+    try {
+      repository = SVNRepositoryFactory.create(svnUrl);
+    } catch (SVNException e) {
+      LOG.debug(e.getMessage());
+
+    }
+    try {
+      this.updateClient.doCheckout(svnUrl, f, SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.IMMEDIATES, true);
+    } catch (SVNException e) {
+
+      String errorMessage = e.getMessage();
+      boolean noFolderRepository = errorMessage.contains("E200007");
+
+      if (noFolderRepository) {
+        LOG.error("SVN Checkout error: Repository: " + "url"
+            + " wird ignoriert. Nur Repositories mit einem Ordner werden berücksichtigt.");
+
+      } else {
+        e.printStackTrace();
+        LOG.error("SVN Checkout error: " + e.getMessage());
+      }
+    }
+
+    String[] subFiles = null;
+    File file = new File(path);
+    subFiles = file.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File current, String name) {
+
+        return new File(current, name).exists();
+      }
+    });
+
+    LinkedList<String> subFilesDynamicList = new LinkedList<>();
+
+    for (int j = 0; j < subFiles.length; j++) {
+      subFilesDynamicList.add(subFiles[j]);
+    }
+
+    String[] subFolders = null;
+    subFolders = file.list(new FilenameFilter() {
+      @Override
+      public boolean accept(File current, String name) {
+
+        return new File(current, name).isDirectory();
+      }
+    });
+    int sizeFolders = subFolders.length;
+
+    LinkedList<String> subFoldersDynamicList = new LinkedList<>();
+
+    for (int j = 0; j < subFolders.length; j++) {
+      subFoldersDynamicList.add(subFolders[j]);
+    }
+
+    /*
+     * Ordner, die mit einem . beginnen, werden ignoriert. Dabei handelt es sich um den .svn Ordner, der sich im
+     * Hauptverzeichnis befindet.
+     */
+
+    for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+
+      boolean isPoint = string.charAt(0) == '.';
+
+      if (isPoint)
+        iterator.remove();
+    }
+
+    boolean continueRecursion = false;
+
+    for (Iterator iterator = this.conditionsList.iterator(); iterator.hasNext();) {
+      LinkedList<String> linkedList = (LinkedList<String>) iterator.next();
+
+      boolean resultAndEvaluation = true;
+      for (Iterator iterator2 = linkedList.iterator(); iterator2.hasNext();) {
+        String string = (String) iterator2.next();
+        String asds = createRegexFromGlob(string);
+
+        boolean found = containRegEx(subFilesDynamicList, asds);
+        resultAndEvaluation = resultAndEvaluation && found;
+      }
+
+      continueRecursion = continueRecursion || resultAndEvaluation;
+
+    }
+
+    // gehe rekursiv die Ordner nicht durch falls die Bedinungen im ordner nicht erfüllt
+
+    boolean givenDepthExceeded = false;
+
+    if (!this.depth.equals("*")) {
+      int intDepth = Integer.parseInt(this.depth);
+      givenDepthExceeded = accumulator > intDepth;
+    }
+
+    if (continueRecursion || givenDepthExceeded) {
+
+      return;
+    }
+
+    else
+
+    {
+      for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+        String string = (String) iterator.next();
+
+        String newPath = svnPath + string + "/";
+        checkoutRecursive(newPath, path + "/" + string, accumulator + 1);
+      }
+    }
+
+  }
+
+  /*
+   * Prüft, ob sich ein übergebener regulärer Ausdruck sich im übergebenen Array befindet.
+   *
+   */
+
+  private boolean containRegEx(LinkedList<String> subFoldersDynamicList, String regEx) {
+
+    boolean result = false;
+    for (Iterator iterator = subFoldersDynamicList.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+
+      Pattern p2 = Pattern.compile(regEx);
+      Matcher m2 = p2.matcher(string);
+      boolean ignoreApplication = m2.find();
+
+      if (ignoreApplication) {
+        result = true;
+      }
+
+    }
+    return result;
+
   }
 
   /**
@@ -706,6 +985,32 @@ public class Application {
     if (!file.delete()) {
       throw new IOException("Failed to delete " + file);
     }
+  }
+
+  private String createRegexFromGlob(String glob) {
+
+    StringBuilder out = new StringBuilder("^");
+    for (int i = 0; i < glob.length(); ++i) {
+      final char c = glob.charAt(i);
+      switch (c) {
+        case '*':
+          out.append(".*");
+          break;
+        case '?':
+          out.append('.');
+          break;
+        case '.':
+          out.append("\\.");
+          break;
+        case '\\':
+          out.append("\\\\");
+          break;
+        default:
+          out.append(c);
+      }
+    }
+    out.append('$');
+    return out.toString();
   }
 
   public static void main(String[] args) {
